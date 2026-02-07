@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Netflix Clone — Demo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="logo">NETFLIX</div>
+
+    <nav class="nav-desktop">
+      <a href="#">Home</a>
+      <a href="#">TV Shows</a>
+      <a href="#">Movies</a>
+      <a href="#">My List</a>
+    </nav>
+
+    <div class="nav-actions">
+      <input id="search" class="search" placeholder="Search" />
+      <button id="hamburger" class="hamburger" aria-label="Open menu">☰</button>
+      <div class="avatar">U</div>
+    </div>
+
+    <!-- Mobile menu -->
+    <div id="mobileMenu" class="mobile-menu hidden">
+      <a href="#">Home</a>
+      <a href="#">TV Shows</a>
+      <a href="#">Movies</a>
+      <a href="#">My List</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg" role="img" aria-label="Featured movie poster"></div>
+    <div class="hero-inner">
+      <h1 id="heroTitle">Avengers: Endgame</h1>
+      <p id="heroDesc">The epic conclusion to the Infinity Saga. Heroes unite to save the universe.</p>
+      <div class="hero-buttons">
+        <button class="btn play-hero" data-videoid="hA6hldpSTF8">▶ Play</button>
+        <button class="btn info-hero">ℹ More Info</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROWS -->
+  <main id="rowsContainer" class="rows"></main>
+
+  <!-- Trailer Modal -->
+  <div id="trailerModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-panel" role="dialog" aria-modal="true">
+      <button id="closeModal" class="modal-close" aria-label="Close">✕</button>
+      <div class="video-wrap">
+        <!-- iframe src set by JS -->
+        <iframe id="trailerFrame" width="100%" height="100%" frameborder="0"
+          allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
