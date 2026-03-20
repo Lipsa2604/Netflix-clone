@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Netflix Clone — Who's Watching?</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;font-family:'DM Sans',sans-serif;background:#141414;color:#fff;-webkit-font-smoothing:antialiased}
+    .profiles-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;animation:fadeIn .5s ease both}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    .logo{font-family:'Bebas Neue',cursive;color:#e50914;font-size:2.2rem;letter-spacing:3px;position:absolute;top:28px;left:40px;text-decoration:none}
+    h1{font-size:2rem;font-weight:400;letter-spacing:.08em;text-transform:uppercase;margin-bottom:48px;color:#fff}
+    .profiles-grid{display:flex;flex-wrap:wrap;gap:28px;justify-content:center;margin-bottom:52px}
+    .profile-card{display:flex;flex-direction:column;align-items:center;gap:14px;cursor:pointer;animation:popIn .4s cubic-bezier(.22,1,.36,1) both}
+    .profile-card:nth-child(1){animation-delay:.05s}.profile-card:nth-child(2){animation-delay:.1s}.profile-card:nth-child(3){animation-delay:.15s}.profile-card:nth-child(4){animation-delay:.2s}.profile-card:nth-child(5){animation-delay:.25s}
+    @keyframes popIn{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:scale(1)}}
+    .profile-avatar{width:120px;height:120px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',cursive;font-size:3.2rem;border:3px solid transparent;transition:border-color .2s,transform .2s,box-shadow .2s;position:relative;overflow:hidden}
+    .profile-card:hover .profile-avatar{border-color:#fff;transform:scale(1.06);box-shadow:0 12px 30px rgba(0,0,0,.6)}
+    .kids-badge{position:absolute;bottom:0;left:0;right:0;background:#1565c0;text-align:center;font-family:'DM Sans',sans-serif;font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:3px 0}
+    .profile-name{font-size:.95rem;color:#aaa;text-align:center;max-width:120px;transition:color .2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .profile-card:hover .profile-name{color:#fff}
+    .edit-overlay{position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:1.8rem}
+    .profile-card.add-card .profile-avatar{background:rgba(255,255,255,.07);border:3px solid rgba(255,255,255,.15);font-size:2.8rem;color:rgba(255,255,255,.5)}
+    .profile-card.add-card:hover .profile-avatar{background:rgba(255,255,255,.12);border-color:#fff;color:#fff}
+    .profile-card.add-card .profile-name{color:#888}
+    .btn-manage{padding:11px 36px;background:transparent;color:#aaa;border:1px solid rgba(255,255,255,.3);border-radius:4px;font-family:'DM Sans',sans-serif;font-size:.95rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:color .2s,border-color .2s,background .2s}
+    .btn-manage:hover{color:#fff;border-color:#fff;background:rgba(255,255,255,.07)}
+    /* MODAL */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+    .modal-box{background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:36px 40px;width:100%;max-width:460px;animation:fadeIn .25s ease}
+    .modal-box h2{font-size:1.4rem;font-weight:500;margin-bottom:28px}
+    .modal-avatar-preview{width:80px;height:80px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',cursive;font-size:2.4rem;margin:0 auto 24px;border:2px solid rgba(255,255,255,.15);transition:background .2s}
+    .color-row{display:flex;gap:10px;justify-content:center;margin-bottom:24px;flex-wrap:wrap}
+    .color-swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .15s,border-color .15s}
+    .color-swatch:hover{transform:scale(1.2)}
+    .color-swatch.active{border-color:#fff;transform:scale(1.15)}
+    .modal-field{margin-bottom:18px}
+    .modal-field label{display:block;font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#666;margin-bottom:7px}
+    .modal-field input{width:100%;padding:13px 16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:7px;color:#fff;font-family:'DM Sans',sans-serif;font-size:.95rem;outline:none;transition:border-color .2s}
+    .modal-field input:focus{border-color:rgba(229,9,20,.5)}
+    .modal-field input::placeholder{color:#444}
+    .kids-toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+    .kids-toggle-row span{font-size:.9rem;color:#aaa}
+    .toggle{position:relative;display:inline-block;width:44px;height:24px;cursor:pointer}
+    .toggle input{opacity:0;width:0;height:0}
+    .toggle-slider{position:absolute;inset:0;background:rgba(255,255,255,.12);border-radius:24px;transition:background .25s}
+    .toggle-slider::before{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;left:3px;top:3px;transition:transform .25s}
+    .toggle input:checked+.toggle-slider{background:#e50914}
+    .toggle input:checked+.toggle-slider::before{transform:translateX(20px)}
+    .modal-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:8px}
+    .btn-primary{padding:11px 28px;background:#e50914;color:#fff;border:none;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer;transition:background .2s}
+    .btn-primary:hover{background:#c1060f}
+    .btn-secondary{padding:11px 28px;background:rgba(255,255,255,.08);color:#ccc;border:1px solid rgba(255,255,255,.12);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.9rem;cursor:pointer;transition:background .2s}
+    .btn-secondary:hover{background:rgba(255,255,255,.14)}
+    .btn-delete{padding:11px 18px;background:transparent;color:#f87171;border:1px solid rgba(248,113,113,.3);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.9rem;cursor:pointer;transition:background .2s;margin-right:auto}
+    .btn-delete:hover{background:rgba(248,113,113,.1)}
+    .field-error{font-size:.75rem;color:#f87171;margin-top:5px;display:none}
+    .field-error.show{display:block}
+    .hidden{display:none!important}
+    @media(max-width:500px){h1{font-size:1.4rem}.profile-avatar{width:90px;height:90px;font-size:2.4rem}.modal-box{padding:24px 20px}}
+  </style>
+</head>
+<body>
+  <a href="index.html" class="logo">NETFLIX</a>
+  <div class="profiles-screen">
+    <h1>Who's Watching?</h1>
+    <div class="profiles-grid" id="profilesGrid"></div>
+    <button class="btn-manage" id="btnManage">Manage Profiles</button>
+  </div>
+
+  <div class="modal-backdrop hidden" id="profileModal">
+    <div class="modal-box">
+      <h2 id="modalTitle">Add Profile</h2>
+      <div class="modal-avatar-preview" id="modalAvatarPreview">?</div>
+      <div class="color-row" id="colorRow"></div>
+      <div class="modal-field">
+        <label for="profileNameInput">Profile Name</label>
+        <input type="text" id="profileNameInput" placeholder="e.g. Alex, Kids, Work…" maxlength="20"/>
+        <div class="field-error" id="nameError">Name is required.</div>
+      </div>
+      <div class="kids-toggle-row">
+        <span>Kids Profile</span>
+        <label class="toggle"><input type="checkbox" id="kidsToggle"/><span class="toggle-slider"></span></label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-delete hidden" id="btnDeleteProfile">Delete</button>
+        <button class="btn-secondary" id="btnCancelModal">Cancel</button>
+        <button class="btn-primary" id="btnSaveProfile">Save</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const session = JSON.parse(localStorage.getItem('nf_session') || sessionStorage.getItem('nf_session') || 'null');
+if (!session) { window.location.replace('auth.html'); }
+
+const COLORS = ['#e50914','#2563eb','#16a34a','#9333ea','#ea580c','#0891b2','#db2777','#ca8a04'];
+const PROFILES_KEY = 'nf_profiles_' + session.email;
+const ACTIVE_KEY   = 'nf_active_profile_' + session.email;
+
+function getProfiles() {
+  const s = localStorage.getItem(PROFILES_KEY);
+  if (s) return JSON.parse(s);
+  const d = [{ id:'p1', name: session.name || 'Me', color:'#e50914', kids:false }];
+  saveProfiles(d); return d;
+}
+function saveProfiles(p) { localStorage.setItem(PROFILES_KEY, JSON.stringify(p)); }
+function getActive()     { return localStorage.getItem(ACTIVE_KEY); }
+function setActive(id)   { localStorage.setItem(ACTIVE_KEY, id); }
+
+let manageMode = false;
+let editingId  = null;
+let pickedColor = COLORS[0];
+
+function renderProfiles() {
+  const grid = document.getElementById('profilesGrid');
+  const profiles = getProfiles();
+  grid.innerHTML = '';
+
+  profiles.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'profile-card';
+    card.innerHTML = `
+      <div class="profile-avatar" style="background:${p.color}">
+        ${p.name.charAt(0).toUpperCase()}
+        ${p.kids ? '<div class="kids-badge">Kids</div>' : ''}
+        ${manageMode ? '<div class="edit-overlay">✎</div>' : ''}
+      </div>
+      <div class="profile-name">${p.name}</div>
+    `;
+    card.addEventListener('click', () => {
+      if (manageMode) { openModal('edit', p); return; }
+      setActive(p.id);
+      const s = JSON.parse(localStorage.getItem('nf_session') || '{}');
+      s.activeProfile = p.name;
+      s.activeProfileColor = p.color;
+      localStorage.setItem('nf_session', JSON.stringify(s));
+      window.location.href = 'index.html';
+    });
+    grid.appendChild(card);
+  });
+
+  if (profiles.length < 5) {
+    const add = document.createElement('div');
+    add.className = 'profile-card add-card';
+    add.innerHTML = `<div class="profile-avatar">＋</div><div class="profile-name">Add Profile</div>`;
+    add.addEventListener('click', () => openModal('add'));
+    grid.appendChild(add);
+  }
+
+  document.getElementById('btnManage').textContent = manageMode ? 'Done' : 'Manage Profiles';
+}
+
+function openModal(mode, profile) {
+  editingId   = mode === 'edit' ? profile.id : null;
+  pickedColor = mode === 'edit' ? profile.color : COLORS[Math.floor(Math.random() * COLORS.length)];
+  document.getElementById('modalTitle').textContent = mode === 'edit' ? 'Edit Profile' : 'Add Profile';
+  document.getElementById('profileNameInput').value = mode === 'edit' ? profile.name : '';
+  document.getElementById('kidsToggle').checked = mode === 'edit' ? profile.kids : false;
+  document.getElementById('btnDeleteProfile').classList.toggle('hidden', mode !== 'edit');
+  document.getElementById('nameError').classList.remove('show');
+  renderColorRow(); updateModalPreview();
+  document.getElementById('profileModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('profileNameInput').focus(), 50);
+}
+
+function renderColorRow() {
+  const row = document.getElementById('colorRow');
+  row.innerHTML = COLORS.map(c =>
+    `<div class="color-swatch ${c===pickedColor?'active':''}" data-color="${c}" style="background:${c}"></div>`
+  ).join('');
+  row.querySelectorAll('.color-swatch').forEach(s => {
+    s.addEventListener('click', () => { pickedColor = s.dataset.color; renderColorRow(); updateModalPreview(); });
+  });
+}
+
+function updateModalPreview() {
+  const name = document.getElementById('profileNameInput').value.trim();
+  const prev = document.getElementById('modalAvatarPreview');
+  prev.style.background = pickedColor;
+  prev.textContent = name ? name.charAt(0).toUpperCase() : '?';
+}
+
+document.getElementById('profileNameInput').addEventListener('input', updateModalPreview);
+
+function closeModal() { document.getElementById('profileModal').classList.add('hidden'); editingId = null; }
+document.getElementById('btnCancelModal').addEventListener('click', closeModal);
+document.getElementById('profileModal').addEventListener('click', e => { if (e.target === document.getElementById('profileModal')) closeModal(); });
+
+document.getElementById('btnSaveProfile').addEventListener('click', () => {
+  const name = document.getElementById('profileNameInput').value.trim();
+  if (!name) { document.getElementById('nameError').classList.add('show'); return; }
+  const kids = document.getElementById('kidsToggle').checked;
+  const profiles = getProfiles();
+  if (editingId) {
+    const idx = profiles.findIndex(p => p.id === editingId);
+    if (idx > -1) { profiles[idx].name = name; profiles[idx].color = pickedColor; profiles[idx].kids = kids; }
+  } else {
+    profiles.push({ id:'p'+Date.now(), name, color:pickedColor, kids });
+  }
+  saveProfiles(profiles); closeModal(); renderProfiles();
+});
+
+document.getElementById('btnDeleteProfile').addEventListener('click', () => {
+  if (!editingId) return;
+  const profiles = getProfiles().filter(p => p.id !== editingId);
+  if (!profiles.length) { alert('You must have at least one profile.'); return; }
+  saveProfiles(profiles);
+  if (getActive() === editingId) localStorage.removeItem(ACTIVE_KEY);
+  closeModal(); renderProfiles();
+});
+
+document.getElementById('btnManage').addEventListener('click', () => { manageMode = !manageMode; renderProfiles(); });
+
+renderProfiles();
+</script>
+</body>
+</html>

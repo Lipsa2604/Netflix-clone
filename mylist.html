@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Netflix Clone — My List</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .list-layout {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 48px 28px 80px;
+      animation: fadeUp .45s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    .page-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 2.2rem; letter-spacing: 3px; color: #fff;
+      margin-bottom: 8px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .page-title::before {
+      content: ''; display: block;
+      width: 4px; height: 32px;
+      background: #e50914; border-radius: 2px; flex-shrink: 0;
+    }
+    .list-meta { font-size: 0.85rem; color: #666; margin-bottom: 36px; }
+    .list-meta span { color: #e50914; font-weight: 600; }
+
+    /* TABS (My List / Browse to Add) */
+    .tabs {
+      display: flex; gap: 0; margin-bottom: 32px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .tab-btn {
+      background: none; border: none; color: #777;
+      font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500;
+      padding: 10px 22px 13px; cursor: pointer; position: relative;
+      transition: color .2s; letter-spacing: .02em;
+    }
+    .tab-btn.active { color: #fff; }
+    .tab-btn.active::after {
+      content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px;
+      background: #e50914; border-radius: 2px 2px 0 0;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: fadeIn .25s ease; }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+    /* GRID */
+    .movie-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 18px;
+    }
+
+    /* MOVIE CARD */
+    .movie-card {
+      position: relative; border-radius: 8px; overflow: hidden;
+      background: #1a1a1a; cursor: pointer;
+      transition: transform .2s, box-shadow .2s;
+      animation: popIn .3s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes popIn {
+      from { opacity:0; transform:scale(.92); }
+      to   { opacity:1; transform:scale(1); }
+    }
+    .movie-card:hover { transform: translateY(-6px) scale(1.03); box-shadow: 0 18px 36px rgba(0,0,0,0.7); }
+    .movie-card img {
+      width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block;
+      background: #222;
+    }
+    .movie-card .card-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 55%);
+      opacity: 0; transition: opacity .2s;
+      display: flex; flex-direction: column; justify-content: flex-end;
+      padding: 12px;
+    }
+    .movie-card:hover .card-overlay { opacity: 1; }
+    .card-overlay h4 { font-size: 0.82rem; font-weight: 600; margin: 0 0 8px; line-height: 1.3; }
+    .card-actions { display: flex; gap: 8px; }
+
+    .card-btn {
+      flex: 1; padding: 7px 6px;
+      border: none; border-radius: 5px;
+      font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 600;
+      cursor: pointer; transition: background .15s, transform .1s;
+      letter-spacing: .03em; white-space: nowrap;
+    }
+    .card-btn:active { transform: scale(0.97); }
+    .card-btn.play  { background: rgba(255,255,255,0.9); color: #000; }
+    .card-btn.play:hover  { background: #fff; }
+    .card-btn.remove { background: rgba(229,9,20,0.25); color: #fca5a5; border: 1px solid rgba(229,9,20,0.4); }
+    .card-btn.remove:hover { background: rgba(229,9,20,0.4); }
+    .card-btn.add    { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+    .card-btn.add:hover    { background: rgba(255,255,255,0.25); }
+
+    /* REMOVE badge on My List tab */
+    .remove-badge {
+      position: absolute; top: 8px; right: 8px;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+      color: #f87171; font-size: 14px; cursor: pointer;
+      opacity: 0; transition: opacity .2s;
+      z-index: 5;
+    }
+    .movie-card:hover .remove-badge { opacity: 1; }
+
+    /* ADDED INDICATOR */
+    .added-indicator {
+      position: absolute; top: 8px; left: 8px;
+      background: rgba(34,197,94,0.85); color: #fff;
+      border-radius: 4px; padding: 3px 8px;
+      font-size: 0.65rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; z-index: 5;
+    }
+
+    /* SEARCH in browse */
+    .browse-search-wrap {
+      position: relative; margin-bottom: 24px; max-width: 340px;
+    }
+    .browse-search {
+      width: 100%; padding: 12px 16px 12px 40px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 8px; color: #fff;
+      font-family: 'DM Sans', sans-serif; font-size: 0.9rem; outline: none;
+      transition: border-color .2s, background .2s;
+    }
+    .browse-search:focus { border-color: rgba(229,9,20,0.4); background: rgba(255,255,255,0.09); }
+    .browse-search::placeholder { color: #444; }
+    .browse-search-icon {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: #555; font-size: 15px; pointer-events: none;
+    }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: #555;
+    }
+    .empty-state .icon { font-size: 3.5rem; margin-bottom: 16px; display: block; }
+    .empty-state h3 { font-size: 1.1rem; font-weight: 500; color: #888; margin: 0 0 8px; }
+    .empty-state p  { font-size: 0.85rem; color: #555; margin: 0; }
+    .empty-btn {
+      display: inline-block; margin-top: 20px;
+      padding: 11px 26px; background: #e50914; color: #fff;
+      border: none; border-radius: 7px;
+      font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; transition: background .2s;
+    }
+    .empty-btn:hover { background: #c1060f; }
+
+    /* Toast */
+    .list-toast {
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+      background: rgba(20,20,20,0.95); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px; padding: 12px 22px;
+      font-size: 0.85rem; color: #fff;
+      opacity: 0; transition: opacity .3s; pointer-events: none;
+      z-index: 150; white-space: nowrap;
+    }
+    .list-toast.show { opacity: 1; }
+
+    /* Trailer modal (reused) */
+    .modal{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.75); z-index:90; }
+    .modal-panel{ width:min(980px,94%); background:linear-gradient(#0b0b0b,#000); border-radius:10px; padding:14px; position:relative; }
+    .modal-close{ position:absolute; right:10px; top:8px; background:transparent;border:none;color:#fff;font-size:20px; cursor:pointer; }
+    .video-wrap{ width:100%; height:0; padding-bottom:56.25%; position:relative; }
+    .video-wrap iframe{ position:absolute; inset:0; width:100%; height:100%; border-radius:6px; }
+
+    @media (max-width: 600px) {
+      .movie-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <a href="index.html" class="logo" style="text-decoration:none;">NETFLIX</a>
+    <nav class="nav-desktop">
+      <a href="index.html">Home</a>
+      <a href="settings.html">Settings</a>
+      <a href="profile.html">Profile</a>
+    </nav>
+    <div class="nav-actions">
+      <div class="user-menu">
+        <div class="avatar" id="avatarBtn">U</div>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="dropdown-name">Signed in as<strong id="dropdownName">User</strong></div>
+          <a href="profile.html"  class="dropdown-item">My Profile</a>
+          <a href="settings.html" class="dropdown-item">Account Settings</a>
+          <a href="mylist.html"   class="dropdown-item">My List</a>
+          <a href="#" class="dropdown-item logout" id="logoutBtn">Sign Out</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="list-layout">
+    <div class="page-title">My List</div>
+    <div class="list-meta"><span id="listCount">0</span> titles saved</div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="mylist">My List</button>
+      <button class="tab-btn" data-tab="browse">Browse & Add</button>
+    </div>
+
+    <!-- MY LIST PANEL -->
+    <div class="tab-panel active" id="panel-mylist">
+      <div class="movie-grid" id="myListGrid"></div>
+    </div>
+
+    <!-- BROWSE PANEL -->
+    <div class="tab-panel" id="panel-browse">
+      <div class="browse-search-wrap">
+        <span class="browse-search-icon">🔍</span>
+        <input class="browse-search" id="browseSearch" placeholder="Search movies to add…"/>
+      </div>
+      <div class="movie-grid" id="browseGrid"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="list-toast" id="listToast"></div>
+
+  <!-- Trailer Modal -->
+  <div id="trailerModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-panel">
+      <button id="closeModal" class="modal-close">✕</button>
+      <div class="video-wrap">
+        <iframe id="trailerFrame" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ======== SESSION CHECK ========
+const session = JSON.parse(localStorage.getItem('nf_session') || sessionStorage.getItem('nf_session') || 'null');
+if (!session) { window.location.replace('auth.html'); }
+
+// ======== INIT HEADER ========
+const users = JSON.parse(localStorage.getItem('nf_users') || '[]');
+const cu = users.find(u => u.email === session.email);
+const aColor = (cu && cu.avatarColor) || '#e50914';
+const initial = session.name ? session.name.charAt(0).toUpperCase() : 'U';
+document.getElementById('avatarBtn').textContent = initial;
+document.getElementById('avatarBtn').style.background = aColor;
+document.getElementById('dropdownName').textContent = session.name;
+
+// ======== ALL MOVIES CATALOGUE ========
+const ALL_MOVIES = [
+  {title:"Avengers: Endgame",      poster:"https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg",   videoId:"hA6hldpSTF8"},
+  {title:"The Dark Knight",        poster:"https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",   videoId:"EXeTwQWrcwY"},
+  {title:"Interstellar",           poster:"https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg",   videoId:"zSWdZVtXT7E"},
+  {title:"Inception",              poster:"https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",   videoId:"YoHD9XEInc0"},
+  {title:"Spider-Man: No Way Home",poster:"https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg",   videoId:"JfVOs4VSpmA"},
+  {title:"Black Panther",          poster:"https://image.tmdb.org/t/p/w500/uxzzxijgPIY7slzFvMotPv8wjKA.jpg",   videoId:"xjDjIWPwcPU"},
+  {title:"The Matrix",             poster:"https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",   videoId:"m8e-FF8MsqU"},
+  {title:"The Avengers",           poster:"https://image.tmdb.org/t/p/w500/RYMX2wcKCBAr24UyPD7xwmjaTn.jpg",    videoId:"eOrNdBpGMv8"},
+  {title:"Joker",                  poster:"https://upload.wikimedia.org/wikipedia/en/e/e1/Joker_%282019_film%29_poster.jpg", videoId:"zAGVQLHvwOY"},
+  {title:"La La Land",             poster:"https://upload.wikimedia.org/wikipedia/en/a/ab/La_La_Land_%28film%29.png",       videoId:"0pdqf4P9MB8"},
+  {title:"Forrest Gump",           poster:"https://upload.wikimedia.org/wikipedia/en/6/67/Forrest_Gump_poster.jpg",         videoId:"bLvqoHBptjg"},
+  {title:"The Prestige",           poster:"https://upload.wikimedia.org/wikipedia/en/d/d2/Prestige_poster.jpg",             videoId:"ijXruSzfGEc"},
+  {title:"Mad Max: Fury Road",     poster:"https://image.tmdb.org/t/p/w500/8tZYtuWezp8JbcsvHYO0O46tFbo.jpg",   videoId:"hEJnMQG9ev8"},
+  {title:"John Wick",              poster:"https://image.tmdb.org/t/p/w500/ziEuG1essDuWuC5lpWUaw1uXY2O.jpg",   videoId:"2AUmvWm5ZDQ"},
+  {title:"Finding Nemo",           poster:"https://upload.wikimedia.org/wikipedia/en/2/29/Finding_Nemo.jpg",                videoId:"2zLkasScy7A"},
+  {title:"Frozen",                 poster:"https://upload.wikimedia.org/wikipedia/en/0/05/Frozen_%282013_film%29_poster.jpg",videoId:"TbQm5doF_Uc"},
+  {title:"The Lion King",          poster:"https://upload.wikimedia.org/wikipedia/en/3/3d/The_Lion_King_poster.jpg",        videoId:"7TavVZMewpY"},
+  {title:"The Shawshank Redemption",poster:"https://upload.wikimedia.org/wikipedia/en/8/81/ShawshankRedemptionMoviePoster.jpg",videoId:"6hB3S9bIaco"},
+  {title:"Inglourious Basterds",   poster:"https://upload.wikimedia.org/wikipedia/en/c/c3/Inglourious_Basterds_poster.jpg", videoId:"KnrRy6kSFF0"},
+  {title:"Guardians of the Galaxy Vol. 2", poster:"https://image.tmdb.org/t/p/w500/y4MBh0EjBlMuOzv9axM4qJlmhzz.jpg", videoId:"dW1BIid8Osg"},
+];
+
+// ======== MY LIST STORAGE ========
+const LIST_KEY = 'nf_mylist_' + session.email;
+function getMyList()   { return JSON.parse(localStorage.getItem(LIST_KEY) || '[]'); }
+function saveMyList(l) { localStorage.setItem(LIST_KEY, JSON.stringify(l)); }
+function isInList(title) { return getMyList().some(m => m.title === title); }
+
+function addToList(movie) {
+  const list = getMyList();
+  if (!list.some(m => m.title === movie.title)) { list.push(movie); saveMyList(list); }
+}
+function removeFromList(title) {
+  const list = getMyList().filter(m => m.title !== title);
+  saveMyList(list);
+}
+
+// ======== TOAST ========
+function showToast(msg) {
+  const el = document.getElementById('listToast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ======== UPDATE COUNT ========
+function updateCount() {
+  document.getElementById('listCount').textContent = getMyList().length;
+}
+
+// ======== RENDER MY LIST ========
+function renderMyList() {
+  const grid = document.getElementById('myListGrid');
+  const list = getMyList();
+  updateCount();
+  if (!list.length) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <span class="icon">📋</span>
+        <h3>Your list is empty</h3>
+        <p>Add movies you want to watch later.</p>
+        <button class="empty-btn" onclick="switchTab('browse')">Browse Movies</button>
+      </div>`;
+    return;
+  }
+  grid.innerHTML = list.map((m, i) => `
+    <div class="movie-card" style="animation-delay:${i*0.04}s">
+      <img src="${m.poster}" alt="${m.title}" onerror="this.style.background='#333'"/>
+      <button class="remove-badge" data-title="${m.title}" title="Remove">✕</button>
+      <div class="card-overlay">
+        <h4>${m.title}</h4>
+        <div class="card-actions">
+          <button class="card-btn play" data-videoid="${m.videoId}">▶ Play</button>
+          <button class="card-btn remove" data-title="${m.title}">− Remove</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  // events
+  grid.querySelectorAll('.remove-badge, .card-btn.remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const title = btn.dataset.title;
+      removeFromList(title);
+      renderMyList();
+      renderBrowse(document.getElementById('browseSearch').value);
+      showToast(`"${title}" removed from My List`);
+    });
+  });
+  grid.querySelectorAll('.card-btn.play').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); openTrailer(btn.dataset.videoid); });
+  });
+}
+
+// ======== RENDER BROWSE ========
+function renderBrowse(filter = '') {
+  const grid = document.getElementById('browseGrid');
+  const q = filter.trim().toLowerCase();
+  const movies = q ? ALL_MOVIES.filter(m => m.title.toLowerCase().includes(q)) : ALL_MOVIES;
+
+  if (!movies.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><span class="icon">🔍</span><h3>No movies found</h3></div>`;
+    return;
+  }
+
+  grid.innerHTML = movies.map((m, i) => `
+    <div class="movie-card" style="animation-delay:${i*0.03}s">
+      <img src="${m.poster}" alt="${m.title}" onerror="this.style.background='#333'"/>
+      ${isInList(m.title) ? '<div class="added-indicator">✓ Added</div>' : ''}
+      <div class="card-overlay">
+        <h4>${m.title}</h4>
+        <div class="card-actions">
+          <button class="card-btn play" data-videoid="${m.videoId}">▶ Play</button>
+          ${isInList(m.title)
+            ? `<button class="card-btn remove" data-title="${m.title}">− Remove</button>`
+            : `<button class="card-btn add" data-movie='${JSON.stringify(m)}'>+ My List</button>`}
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  grid.querySelectorAll('.card-btn.add').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const movie = JSON.parse(btn.dataset.movie);
+      addToList(movie);
+      renderBrowse(document.getElementById('browseSearch').value);
+      renderMyList();
+      showToast(`"${movie.title}" added to My List`);
+    });
+  });
+  grid.querySelectorAll('.card-btn.remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeFromList(btn.dataset.title);
+      renderBrowse(document.getElementById('browseSearch').value);
+      renderMyList();
+      showToast(`"${btn.dataset.title}" removed from My List`);
+    });
+  });
+  grid.querySelectorAll('.card-btn.play').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.stopPropagation(); openTrailer(btn.dataset.videoid); });
+  });
+}
+
+// ======== TABS ========
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `panel-${name}`));
+}
+document.querySelectorAll('.tab-btn').forEach(t => {
+  t.addEventListener('click', () => switchTab(t.dataset.tab));
+});
+
+// ======== BROWSE SEARCH ========
+document.getElementById('browseSearch').addEventListener('input', e => {
+  renderBrowse(e.target.value);
+});
+
+// ======== TRAILER ========
+const trailerModal = document.getElementById('trailerModal');
+const trailerFrame = document.getElementById('trailerFrame');
+function openTrailer(id) {
+  trailerFrame.src = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`;
+  trailerModal.classList.remove('hidden');
+}
+document.getElementById('closeModal').addEventListener('click', () => {
+  trailerFrame.src = ''; trailerModal.classList.add('hidden');
+});
+trailerModal.addEventListener('click', e => {
+  if (e.target === trailerModal) { trailerFrame.src = ''; trailerModal.classList.add('hidden'); }
+});
+
+// ======== DROPDOWN / LOGOUT ========
+const avatarBtn = document.getElementById('avatarBtn');
+const dropdown  = document.getElementById('userDropdown');
+avatarBtn.addEventListener('click', e => { e.stopPropagation(); dropdown.classList.toggle('open'); });
+document.addEventListener('click', () => dropdown.classList.remove('open'));
+dropdown.addEventListener('click', e => e.stopPropagation());
+document.getElementById('logoutBtn').addEventListener('click', e => {
+  e.preventDefault();
+  localStorage.removeItem('nf_session'); sessionStorage.removeItem('nf_session');
+  window.location.href = 'auth.html';
+});
+
+// ======== INIT ========
+renderMyList();
+renderBrowse();
+</script>
+</body>
+</html>

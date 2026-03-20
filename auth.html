@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Netflix Clone — Sign In</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #141414;
+      --red: #e50914;
+      --red-dark: #b0060f;
+      --muted: #8c8c8c;
+      --input-bg: #333;
+      --input-focus: #454545;
+      --card-bg: rgba(0,0,0,0.75);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: #fff;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---- BACKGROUND ---- */
+    .auth-bg {
+      position: fixed; inset: 0; z-index: 0;
+      background-image: url('https://wallpaperaccess.com/full/329583.jpg');
+      background-size: cover; background-position: center;
+      filter: brightness(0.35);
+    }
+    .auth-bg::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.6) 100%);
+    }
+
+    /* ---- HEADER ---- */
+    .auth-header {
+      position: relative; z-index: 10;
+      padding: 22px 60px;
+    }
+    .logo {
+      font-family: 'Bebas Neue', cursive;
+      color: var(--red);
+      font-size: 2.6rem;
+      letter-spacing: 3px;
+      text-decoration: none;
+    }
+
+    /* ---- MAIN CENTER ---- */
+    .auth-main {
+      position: relative; z-index: 10;
+      min-height: calc(100vh - 90px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 20px 60px;
+    }
+
+    /* ---- CARD ---- */
+    .auth-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 6px;
+      padding: 52px 64px 60px;
+      width: 100%; max-width: 450px;
+      animation: fadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 2rem;
+      letter-spacing: 2px;
+      margin-bottom: 28px;
+      color: #fff;
+    }
+
+    /* ---- TABS ---- */
+    .tabs {
+      display: flex; gap: 0;
+      margin-bottom: 30px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .tab-btn {
+      background: none; border: none; color: var(--muted);
+      font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 500;
+      padding: 10px 20px 12px;
+      cursor: pointer; position: relative;
+      transition: color 0.2s;
+    }
+    .tab-btn.active { color: #fff; }
+    .tab-btn.active::after {
+      content: '';
+      position: absolute; bottom: -1px; left: 0; right: 0; height: 2px;
+      background: var(--red);
+      border-radius: 2px 2px 0 0;
+    }
+
+    /* ---- FORM ---- */
+    .form-panel { display: none; }
+    .form-panel.active { display: block; animation: fadeIn 0.3s ease both; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .field { margin-bottom: 16px; position: relative; }
+
+    .field label {
+      display: block; font-size: 0.72rem; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 7px;
+    }
+
+    .field input {
+      width: 100%; padding: 14px 16px;
+      background: var(--input-bg); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 5px; color: #fff; font-family: 'DM Sans', sans-serif;
+      font-size: 1rem; outline: none;
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .field input:focus {
+      background: var(--input-focus);
+      border-color: rgba(255,255,255,0.25);
+      box-shadow: 0 0 0 3px rgba(229,9,20,0.15);
+    }
+    .field input::placeholder { color: #666; }
+
+    /* Password toggle */
+    .pw-wrap { position: relative; }
+    .pw-toggle {
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      font-size: 0.78rem; font-weight: 600; letter-spacing: 0.05em;
+      text-transform: uppercase; padding: 4px;
+      transition: color 0.2s;
+    }
+    .pw-toggle:hover { color: #fff; }
+
+    /* Error message */
+    .field-error {
+      font-size: 0.78rem; color: #f87171;
+      margin-top: 5px; min-height: 18px;
+      display: none;
+    }
+    .field-error.visible { display: block; }
+
+    /* Alert banner */
+    .alert {
+      padding: 12px 16px; border-radius: 5px;
+      font-size: 0.875rem; margin-bottom: 18px;
+      display: none; animation: fadeIn 0.2s ease;
+    }
+    .alert.error { background: rgba(248,65,65,0.15); border: 1px solid rgba(248,65,65,0.4); color: #fca5a5; display: block; }
+    .alert.success { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.35); color: #86efac; display: block; }
+
+    /* Remember me / extras */
+    .form-extras {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .remember { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .remember input[type="checkbox"] {
+      width: 16px; height: 16px; accent-color: var(--red); cursor: pointer;
+    }
+    .remember span { font-size: 0.85rem; color: var(--muted); }
+    .forgot-link { font-size: 0.85rem; color: var(--muted); text-decoration: none; }
+    .forgot-link:hover { color: #fff; text-decoration: underline; }
+
+    /* Submit button */
+    .btn-submit {
+      width: 100%; padding: 16px;
+      background: var(--red); color: #fff;
+      border: none; border-radius: 5px;
+      font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 600;
+      letter-spacing: 0.03em; cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      position: relative; overflow: hidden;
+    }
+    .btn-submit:hover { background: #c1060f; }
+    .btn-submit:active { transform: scale(0.99); }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Spinner inside button */
+    .btn-submit .spinner {
+      display: none; width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      margin: 0 auto;
+    }
+    .btn-submit.loading .btn-text { display: none; }
+    .btn-submit.loading .spinner { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* OR divider */
+    .divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 22px 0; color: var(--muted); font-size: 0.82rem;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.1);
+    }
+
+    /* Switch link */
+    .switch-text { text-align: center; font-size: 0.88rem; color: var(--muted); margin-top: 24px; }
+    .switch-text a { color: #fff; font-weight: 500; text-decoration: none; }
+    .switch-text a:hover { text-decoration: underline; }
+
+    /* Terms note */
+    .terms-note { font-size: 0.75rem; color: #555; margin-top: 18px; text-align: center; line-height: 1.5; }
+    .terms-note a { color: #777; }
+
+    /* Password strength bar */
+    .strength-bar { margin-top: 8px; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden; }
+    .strength-fill { height: 100%; border-radius: 2px; width: 0%; transition: width 0.3s, background 0.3s; }
+    .strength-label { font-size: 0.72rem; color: var(--muted); margin-top: 4px; height: 16px; }
+
+    /* ---- RESPONSIVE ---- */
+    @media (max-width: 520px) {
+      .auth-header { padding: 18px 24px; }
+      .auth-card { padding: 36px 28px 44px; }
+      .card-title { font-size: 1.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="auth-bg"></div>
+
+  <header class="auth-header">
+    <a href="#" class="logo">NETFLIX</a>
+  </header>
+
+  <main class="auth-main">
+    <div class="auth-card">
+
+      <!-- TABS -->
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="login">Sign In</button>
+        <button class="tab-btn" data-tab="register">Register</button>
+      </div>
+
+      <!-- ===== LOGIN PANEL ===== -->
+      <div class="form-panel active" id="panel-login">
+        <div class="alert" id="login-alert"></div>
+
+        <div class="field">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email" />
+          <div class="field-error" id="login-email-err">Please enter a valid email.</div>
+        </div>
+
+        <div class="field">
+          <label for="login-pw">Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="login-pw" placeholder="••••••••" autocomplete="current-password" />
+            <button type="button" class="pw-toggle" data-target="login-pw">SHOW</button>
+          </div>
+          <div class="field-error" id="login-pw-err">Password is required.</div>
+        </div>
+
+        <div class="form-extras">
+          <label class="remember">
+            <input type="checkbox" id="remember-me" checked />
+            <span>Remember me</span>
+          </label>
+          <a href="#" class="forgot-link">Forgot password?</a>
+        </div>
+
+        <button class="btn-submit" id="btn-login">
+          <span class="btn-text">Sign In</span>
+          <div class="spinner"></div>
+        </button>
+
+        <div class="switch-text">
+          New to Netflix? <a href="#" data-goto="register">Register now.</a>
+        </div>
+
+        <p class="terms-note">
+          This page is protected by Google reCAPTCHA to ensure you're not a bot.
+          <a href="#">Learn more.</a>
+        </p>
+      </div>
+
+      <!-- ===== REGISTER PANEL ===== -->
+      <div class="form-panel" id="panel-register">
+        <div class="alert" id="register-alert"></div>
+
+        <div class="field">
+          <label for="reg-name">Full Name</label>
+          <input type="text" id="reg-name" placeholder="Your full name" autocomplete="name" />
+          <div class="field-error" id="reg-name-err">Name must be at least 2 characters.</div>
+        </div>
+
+        <div class="field">
+          <label for="reg-email">Email</label>
+          <input type="email" id="reg-email" placeholder="you@example.com" autocomplete="email" />
+          <div class="field-error" id="reg-email-err">Please enter a valid email.</div>
+        </div>
+
+        <div class="field">
+          <label for="reg-pw">Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="reg-pw" placeholder="Min 8 characters" autocomplete="new-password" />
+            <button type="button" class="pw-toggle" data-target="reg-pw">SHOW</button>
+          </div>
+          <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+          <div class="strength-label" id="strength-label"></div>
+          <div class="field-error" id="reg-pw-err">Password must be at least 8 characters.</div>
+        </div>
+
+        <div class="field">
+          <label for="reg-pw2">Confirm Password</label>
+          <div class="pw-wrap">
+            <input type="password" id="reg-pw2" placeholder="Repeat password" autocomplete="new-password" />
+            <button type="button" class="pw-toggle" data-target="reg-pw2">SHOW</button>
+          </div>
+          <div class="field-error" id="reg-pw2-err">Passwords do not match.</div>
+        </div>
+
+        <button class="btn-submit" id="btn-register" style="margin-top:8px;">
+          <span class="btn-text">Create Account</span>
+          <div class="spinner"></div>
+        </button>
+
+        <div class="switch-text">
+          Already have an account? <a href="#" data-goto="login">Sign in.</a>
+        </div>
+
+        <p class="terms-note">
+          By registering, you agree to our <a href="#">Terms of Use</a> and <a href="#">Privacy Policy</a>.
+        </p>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // ========== TAB SWITCHING ==========
+    const tabs = document.querySelectorAll('.tab-btn');
+    const panels = document.querySelectorAll('.form-panel');
+
+    function switchTab(name) {
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+      panels.forEach(p => p.classList.toggle('active', p.id === `panel-${name}`));
+      clearAlerts();
+    }
+
+    tabs.forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+    document.querySelectorAll('[data-goto]').forEach(a => {
+      a.addEventListener('click', e => { e.preventDefault(); switchTab(a.dataset.goto); });
+    });
+
+    // ========== PASSWORD TOGGLE ==========
+    document.querySelectorAll('.pw-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.dataset.target);
+        const isHidden = input.type === 'password';
+        input.type = isHidden ? 'text' : 'password';
+        btn.textContent = isHidden ? 'HIDE' : 'SHOW';
+      });
+    });
+
+    // ========== PASSWORD STRENGTH ==========
+    const regPw = document.getElementById('reg-pw');
+    const strengthFill = document.getElementById('strength-fill');
+    const strengthLabel = document.getElementById('strength-label');
+    const strengthColors = ['#ef4444','#f97316','#eab308','#22c55e'];
+    const strengthLabels = ['Weak','Fair','Good','Strong'];
+
+    regPw.addEventListener('input', () => {
+      const val = regPw.value;
+      let score = 0;
+      if (val.length >= 8) score++;
+      if (/[A-Z]/.test(val)) score++;
+      if (/[0-9]/.test(val)) score++;
+      if (/[^A-Za-z0-9]/.test(val)) score++;
+      const pct = val.length === 0 ? 0 : Math.max(1, score) * 25;
+      strengthFill.style.width = pct + '%';
+      strengthFill.style.background = val.length === 0 ? '' : strengthColors[Math.max(0,score-1)];
+      strengthLabel.textContent = val.length === 0 ? '' : strengthLabels[Math.max(0,score-1)];
+      strengthLabel.style.color = val.length === 0 ? '' : strengthColors[Math.max(0,score-1)];
+    });
+
+    // ========== VALIDATION HELPERS ==========
+    function showErr(id, msg) {
+      const el = document.getElementById(id);
+      if (msg) el.textContent = msg;
+      el.classList.add('visible');
+    }
+    function hideErr(id) { document.getElementById(id).classList.remove('visible'); }
+    function clearAlerts() {
+      document.querySelectorAll('.alert').forEach(a => { a.className = 'alert'; a.textContent = ''; });
+    }
+    function showAlert(id, type, msg) {
+      const el = document.getElementById(id);
+      el.className = `alert ${type}`; el.textContent = msg;
+    }
+    function isEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+    function fakeDelay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // ========== LOCAL STORAGE USER STORE ==========
+    function getUsers() { return JSON.parse(localStorage.getItem('nf_users') || '[]'); }
+    function saveUsers(users) { localStorage.setItem('nf_users', JSON.stringify(users)); }
+    function setSession(user) {
+      localStorage.setItem('nf_session', JSON.stringify({ name: user.name, email: user.email }));
+    }
+
+    // ========== LOGIN ==========
+    document.getElementById('btn-login').addEventListener('click', async () => {
+      clearAlerts();
+      const email = document.getElementById('login-email').value.trim();
+      const pw    = document.getElementById('login-pw').value;
+      let valid = true;
+
+      if (!isEmail(email)) { showErr('login-email-err'); valid = false; } else hideErr('login-email-err');
+      if (!pw)              { showErr('login-pw-err');    valid = false; } else hideErr('login-pw-err');
+      if (!valid) return;
+
+      const btn = document.getElementById('btn-login');
+      btn.classList.add('loading'); btn.disabled = true;
+      await fakeDelay(900);
+
+      const users = getUsers();
+      const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === pw);
+
+      btn.classList.remove('loading'); btn.disabled = false;
+
+      if (!user) {
+        showAlert('login-alert', 'error', 'Incorrect email or password. Please try again.');
+        return;
+      }
+
+      // Remember me
+      if (!document.getElementById('remember-me').checked) {
+        sessionStorage.setItem('nf_session', JSON.stringify({ name: user.name, email: user.email }));
+      } else {
+        setSession(user);
+      }
+
+      showAlert('login-alert', 'success', `Welcome back, ${user.name}! Redirecting…`);
+      await fakeDelay(1200);
+      window.location.href = 'profiles.html'; // redirect to main app
+    });
+
+    // ========== REGISTER ==========
+    document.getElementById('btn-register').addEventListener('click', async () => {
+      clearAlerts();
+      const name  = document.getElementById('reg-name').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const pw    = document.getElementById('reg-pw').value;
+      const pw2   = document.getElementById('reg-pw2').value;
+      let valid = true;
+
+      if (name.length < 2)  { showErr('reg-name-err');  valid = false; } else hideErr('reg-name-err');
+      if (!isEmail(email))  { showErr('reg-email-err'); valid = false; } else hideErr('reg-email-err');
+      if (pw.length < 8)    { showErr('reg-pw-err');    valid = false; } else hideErr('reg-pw-err');
+      if (pw !== pw2)       { showErr('reg-pw2-err');   valid = false; } else hideErr('reg-pw2-err');
+      if (!valid) return;
+
+      const btn = document.getElementById('btn-register');
+      btn.classList.add('loading'); btn.disabled = true;
+      await fakeDelay(1000);
+
+      const users = getUsers();
+      if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        showAlert('register-alert', 'error', 'An account with this email already exists.');
+        return;
+      }
+
+      users.push({ name, email, password: pw, createdAt: new Date().toISOString() });
+      saveUsers(users);
+      setSession({ name, email });
+
+      btn.classList.remove('loading'); btn.disabled = false;
+      showAlert('register-alert', 'success', `Account created! Welcome, ${name}! Redirecting…`);
+      await fakeDelay(1400);
+      window.location.href = 'profiles.html';
+    });
+  </script>
+</body>
+</html>

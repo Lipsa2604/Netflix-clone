@@ -3,41 +3,91 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Netflix Clone — Demo</title>
+  <title>Netflix Clone — Home</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    #auth-guard { position:fixed;inset:0;background:#141414;z-index:9999;display:flex;align-items:center;justify-content:center; }
+    #auth-guard .spinner { width:38px;height:38px;border:3px solid rgba(255,255,255,.12);border-top-color:#e50914;border-radius:50%;animation:spin .75s linear infinite; }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .user-menu{position:relative}
+    .avatar{width:36px;height:36px;border-radius:6px;background:#e50914;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;cursor:pointer;user-select:none;transition:opacity .15s}
+    .avatar:hover{opacity:.85}
+    .user-dropdown{display:none;position:absolute;top:calc(100% + 10px);right:0;background:#0b0b0b;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 0;min-width:200px;box-shadow:0 12px 30px rgba(0,0,0,.6);z-index:80}
+    .user-dropdown.open{display:block;animation:fadeDown .18s ease}
+    @keyframes fadeDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+    .dropdown-name{padding:10px 18px 8px;font-size:.82rem;color:#888;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:4px}
+    .dropdown-name strong{display:block;color:#fff;font-size:.93rem;margin-top:2px}
+    .dropdown-item{padding:9px 18px;font-size:.88rem;color:#ccc;cursor:pointer;transition:background .15s,color .15s;display:block;text-decoration:none}
+    .dropdown-item:hover{background:rgba(255,255,255,.07);color:#fff}
+    .dropdown-item.logout{color:#f87171}
+    .dropdown-item.logout:hover{background:rgba(239,68,68,.1)}
+    /* Profile switcher row in dropdown */
+    .dropdown-profiles { padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.07); display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
+    .dp-avatar { width:32px;height:32px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;cursor:pointer;border:2px solid transparent;transition:border-color .15s,transform .15s;flex-shrink:0; }
+    .dp-avatar:hover{transform:scale(1.1)}
+    .dp-avatar.active-profile{border-color:#fff}
+    .dp-manage { font-size:.72rem;color:#888;cursor:pointer;padding:4px 0;letter-spacing:.04em; }
+    .dp-manage:hover{color:#fff}
+
+    /* GENRE TABS */
+    .genre-tabs-wrap { padding:0 6% 0; background:linear-gradient(to bottom,rgba(20,20,20,.95),transparent); position:sticky;top:56px;z-index:50; }
+    #genreTabs { display:flex;gap:8px;padding:12px 0 10px;overflow-x:auto;scrollbar-width:none; }
+    #genreTabs::-webkit-scrollbar{display:none}
+    .genre-tab { padding:7px 18px;border-radius:20px;border:1px solid rgba(255,255,255,.18);background:transparent;color:#ccc;font-size:.82rem;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s,border-color .15s,transform .1s;flex-shrink:0; }
+    .genre-tab:hover{background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.4)}
+    .genre-tab.active{background:#e50914;color:#fff;border-color:#e50914;transform:scale(1.04)}
+  </style>
 </head>
 <body>
+
+  <div id="auth-guard"><div class="spinner"></div></div>
+
   <header class="site-header">
-    <div class="logo">NETFLIX</div>
-
+    <a href="profiles.html" class="logo" style="text-decoration:none;">NETFLIX</a>
     <nav class="nav-desktop">
-      <a href="#">Home</a>
-      <a href="#">TV Shows</a>
-      <a href="#">Movies</a>
-      <a href="#">My List</a>
+      <a href="index.html">Home</a>
+      <a href="mylist.html">My List</a>
+      <a href="profile.html">Profile</a>
+      <a href="settings.html">Settings</a>
     </nav>
-
     <div class="nav-actions">
       <input id="search" class="search" placeholder="Search" />
       <button id="hamburger" class="hamburger" aria-label="Open menu">☰</button>
-      <div class="avatar">U</div>
+      <div class="user-menu">
+        <div class="avatar" id="avatarBtn" title="Account">U</div>
+        <div class="user-dropdown" id="userDropdown">
+          <!-- Profile switcher -->
+          <div class="dropdown-profiles" id="dropdownProfiles"></div>
+          <div class="dropdown-name">Signed in as<strong id="dropdownName">User</strong></div>
+          <a href="profiles.html" class="dropdown-item">Switch Profile</a>
+          <a href="profile.html"  class="dropdown-item">My Profile</a>
+          <a href="settings.html" class="dropdown-item">Account Settings</a>
+          <a href="mylist.html"   class="dropdown-item">My List</a>
+          <a href="#" class="dropdown-item logout" id="logoutBtn">Sign Out</a>
+        </div>
+      </div>
     </div>
-
-    <!-- Mobile menu -->
     <div id="mobileMenu" class="mobile-menu hidden">
-      <a href="#">Home</a>
-      <a href="#">TV Shows</a>
-      <a href="#">Movies</a>
-      <a href="#">My List</a>
+      <a href="index.html">Home</a>
+      <a href="mylist.html">My List</a>
+      <a href="profile.html">Profile</a>
+      <a href="settings.html">Settings</a>
+      <a href="profiles.html">Switch Profile</a>
+      <a href="auth.html" id="mobileLogout" style="color:#f87171;">Sign Out</a>
     </div>
   </header>
 
+  <!-- GENRE TABS -->
+  <div class="genre-tabs-wrap">
+    <div id="genreTabs"></div>
+  </div>
+
   <!-- HERO -->
   <section class="hero">
-    <div class="hero-bg" role="img" aria-label="Featured movie poster"></div>
+    <div class="hero-bg"></div>
     <div class="hero-inner">
-      <h1 id="heroTitle">Avengers: Endgame</h1>
-      <p id="heroDesc">The epic conclusion to the Infinity Saga. Heroes unite to save the universe.</p>
+      <h1>Avengers: Endgame</h1>
+      <p>The epic conclusion to the Infinity Saga. Heroes unite to save the universe.</p>
       <div class="hero-buttons">
         <button class="btn play-hero" data-videoid="hA6hldpSTF8">▶ Play</button>
         <button class="btn info-hero">ℹ More Info</button>
@@ -45,21 +95,83 @@
     </div>
   </section>
 
-  <!-- ROWS -->
   <main id="rowsContainer" class="rows"></main>
 
-  <!-- Trailer Modal -->
   <div id="trailerModal" class="modal hidden" aria-hidden="true">
     <div class="modal-panel" role="dialog" aria-modal="true">
-      <button id="closeModal" class="modal-close" aria-label="Close">✕</button>
+      <button id="closeModal" class="modal-close">✕</button>
       <div class="video-wrap">
-        <!-- iframe src set by JS -->
-        <iframe id="trailerFrame" width="100%" height="100%" frameborder="0"
-          allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        <iframe id="trailerFrame" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
       </div>
     </div>
   </div>
 
+  <script>
+    const session = JSON.parse(localStorage.getItem('nf_session') || sessionStorage.getItem('nf_session') || 'null');
+    if (!session) { window.location.replace('auth.html'); }
+    else {
+      document.getElementById('auth-guard').style.display = 'none';
+
+      // Active profile name (from profiles page selection)
+      const profileName  = session.activeProfile  || session.name || 'Me';
+      const profileColor = session.activeProfileColor || '#e50914';
+      const initial = profileName.charAt(0).toUpperCase();
+
+      document.getElementById('avatarBtn').textContent = initial;
+      document.getElementById('avatarBtn').style.background = profileColor;
+      document.getElementById('dropdownName').textContent = session.name || session.email;
+
+      // Populate mini profile switcher inside dropdown
+      const PROFILES_KEY = 'nf_profiles_' + session.email;
+      const ACTIVE_KEY   = 'nf_active_profile_' + session.email;
+      const profiles = JSON.parse(localStorage.getItem(PROFILES_KEY) || '[]');
+      const activeId = localStorage.getItem(ACTIVE_KEY);
+      const dpWrap = document.getElementById('dropdownProfiles');
+      if (profiles.length > 0) {
+        profiles.forEach(p => {
+          const dp = document.createElement('div');
+          dp.className = 'dp-avatar' + (p.id === activeId ? ' active-profile' : '');
+          dp.style.background = p.color;
+          dp.title = p.name;
+          dp.textContent = p.name.charAt(0).toUpperCase();
+          dp.addEventListener('click', (e) => {
+            e.stopPropagation();
+            localStorage.setItem(ACTIVE_KEY, p.id);
+            const s = JSON.parse(localStorage.getItem('nf_session') || '{}');
+            s.activeProfile = p.name; s.activeProfileColor = p.color;
+            localStorage.setItem('nf_session', JSON.stringify(s));
+            window.location.reload();
+          });
+          dpWrap.appendChild(dp);
+        });
+        const manage = document.createElement('a');
+        manage.href = 'profiles.html'; manage.className = 'dp-manage';
+        manage.textContent = 'Manage Profiles';
+        dpWrap.appendChild(manage);
+      } else {
+        dpWrap.style.display = 'none';
+      }
+
+      // Dropdown
+      const avatarBtn = document.getElementById('avatarBtn');
+      const dropdown  = document.getElementById('userDropdown');
+      avatarBtn.addEventListener('click', e => { e.stopPropagation(); dropdown.classList.toggle('open'); });
+      document.addEventListener('click', () => dropdown.classList.remove('open'));
+      dropdown.addEventListener('click', e => e.stopPropagation());
+
+      document.getElementById('logoutBtn').addEventListener('click', e => {
+        e.preventDefault();
+        localStorage.removeItem('nf_session'); sessionStorage.removeItem('nf_session');
+        window.location.href = 'auth.html';
+      });
+      document.getElementById('mobileLogout').addEventListener('click', e => {
+        e.preventDefault();
+        localStorage.removeItem('nf_session'); sessionStorage.removeItem('nf_session');
+        window.location.href = 'auth.html';
+      });
+    }
+  </script>
+  <script src="i18n.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
