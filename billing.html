@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Netflix Clone — Subscription & Billing</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .billing-layout { max-width:900px; margin:0 auto; padding:48px 28px 100px; animation:fadeUp .45s cubic-bezier(.22,1,.36,1) both; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+    .page-title { font-family:'Bebas Neue',cursive; font-size:2.2rem; letter-spacing:3px; color:#fff; margin-bottom:8px; display:flex; align-items:center; gap:14px; }
+    .page-title::before { content:''; display:block; width:4px; height:32px; background:#e50914; border-radius:2px; flex-shrink:0; }
+    .page-subtitle { font-size:.88rem; color:#666; margin-bottom:36px; }
+
+    .card { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); border-radius:12px; padding:28px 32px; margin-bottom:24px; }
+    .card:hover { border-color:rgba(255,255,255,.12); }
+    .card-title { font-size:.68rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#e50914; margin-bottom:20px; }
+
+    /* PLAN CARDS */
+    .plans-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:4px; }
+    @media(max-width:680px){ .plans-grid{ grid-template-columns:1fr; } }
+
+    .plan-card {
+      border:2px solid rgba(255,255,255,.1); border-radius:10px; padding:22px 20px;
+      cursor:pointer; transition:border-color .2s, background .2s, transform .15s;
+      position:relative; overflow:hidden;
+    }
+    .plan-card:hover { border-color:rgba(255,255,255,.3); background:rgba(255,255,255,.03); transform:translateY(-2px); }
+    .plan-card.selected { border-color:#e50914; background:rgba(229,9,20,.06); }
+    .plan-card.selected::before { content:'✓'; position:absolute; top:10px; right:12px; color:#e50914; font-weight:700; font-size:1rem; }
+    .plan-popular { position:absolute; top:-1px; left:50%; transform:translateX(-50%); background:#e50914; color:#fff; font-size:.62rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:3px 12px; border-radius:0 0 6px 6px; white-space:nowrap; }
+    .plan-name { font-family:'Bebas Neue',cursive; font-size:1.4rem; letter-spacing:2px; margin-bottom:6px; }
+    .plan-price { font-size:1.8rem; font-weight:700; margin-bottom:4px; }
+    .plan-price span { font-size:.85rem; font-weight:400; color:#888; }
+    .plan-quality { display:inline-block; background:rgba(255,255,255,.08); border-radius:4px; padding:2px 8px; font-size:.72rem; font-weight:600; color:#ccc; margin-bottom:12px; }
+    .plan-features { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; }
+    .plan-features li { font-size:.8rem; color:#aaa; display:flex; align-items:center; gap:7px; }
+    .plan-features li::before { content:'✓'; color:#e50914; font-weight:700; flex-shrink:0; }
+
+    /* CURRENT PLAN STATUS */
+    .status-row { display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid rgba(255,255,255,.05); gap:16px; }
+    .status-row:last-child { border-bottom:none; padding-bottom:0; }
+    .status-label h4 { font-size:.93rem; font-weight:500; margin:0 0 3px; }
+    .status-label p  { font-size:.78rem; color:#666; margin:0; }
+    .badge-active { background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.3); color:#4ade80; border-radius:20px; padding:4px 12px; font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+    .badge-plan   { background:rgba(229,9,20,.12); border:1px solid rgba(229,9,20,.25); color:#e50914; border-radius:20px; padding:4px 12px; font-size:.72rem; font-weight:700; }
+    .btn-outline  { padding:8px 18px; background:transparent; color:#ccc; border:1px solid rgba(255,255,255,.2); border-radius:7px; font-family:'DM Sans',sans-serif; font-size:.84rem; cursor:pointer; transition:background .15s, border-color .15s, color .15s; white-space:nowrap; }
+    .btn-outline:hover { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.4); color:#fff; }
+    .btn-danger-sm { padding:8px 18px; background:transparent; color:#f87171; border:1px solid rgba(248,113,113,.3); border-radius:7px; font-family:'DM Sans',sans-serif; font-size:.84rem; cursor:pointer; transition:background .15s; white-space:nowrap; }
+    .btn-danger-sm:hover { background:rgba(248,113,113,.1); }
+
+    /* BILLING HISTORY */
+    .invoice-row { display:flex; align-items:center; justify-content:space-between; padding:13px 0; border-bottom:1px solid rgba(255,255,255,.05); gap:12px; }
+    .invoice-row:last-child { border-bottom:none; padding-bottom:0; }
+    .invoice-date { font-size:.85rem; color:#aaa; }
+    .invoice-amount { font-size:.9rem; font-weight:600; }
+    .invoice-status { font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:3px 10px; border-radius:20px; }
+    .invoice-status.paid { background:rgba(34,197,94,.12); color:#4ade80; border:1px solid rgba(34,197,94,.25); }
+    .invoice-status.pending { background:rgba(234,179,8,.1); color:#fbbf24; border:1px solid rgba(234,179,8,.25); }
+    .invoice-dl { background:none; border:none; color:#666; cursor:pointer; font-size:14px; padding:4px 8px; border-radius:4px; transition:color .15s, background .15s; }
+    .invoice-dl:hover { color:#fff; background:rgba(255,255,255,.08); }
+
+    /* PAYMENT FORM */
+    .pay-form { display:none; animation:fadeUp .3s ease both; }
+    .pay-form.open { display:block; }
+    .field-row2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+    @media(max-width:520px){ .field-row2{grid-template-columns:1fr} }
+    .field { margin-bottom:16px; }
+    .field label { display:block; font-size:.7rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:#666; margin-bottom:7px; }
+    .field input, .field select {
+      width:100%; padding:13px 16px;
+      background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.09);
+      border-radius:7px; color:#fff; font-family:'DM Sans',sans-serif; font-size:.95rem; outline:none;
+      transition:border-color .2s, background .2s, box-shadow .2s;
+    }
+    .field input:focus, .field select:focus { border-color:rgba(229,9,20,.5); background:rgba(255,255,255,.09); box-shadow:0 0 0 3px rgba(229,9,20,.1); }
+    .field input::placeholder { color:#444; }
+    .field select option { background:#1a1a1a; }
+
+    /* Card number with icon */
+    .card-input-wrap { position:relative; }
+    .card-input-wrap input { padding-right:48px; letter-spacing:.1em; }
+    .card-brand { position:absolute; right:14px; top:50%; transform:translateY(-50%); font-size:1.1rem; pointer-events:none; }
+
+    /* Secure badge */
+    .secure-note { display:flex; align-items:center; gap:8px; font-size:.75rem; color:#555; margin-top:4px; }
+    .secure-note::before { content:'🔒'; font-size:.9rem; }
+
+    /* Payment method tabs */
+    .pay-tabs { display:flex; gap:10px; margin-bottom:24px; }
+    .pay-tab {
+      padding:10px 20px; border-radius:8px;
+      border:1px solid rgba(255,255,255,.1); background:transparent; color:#888;
+      font-family:'DM Sans',sans-serif; font-size:.85rem; cursor:pointer;
+      transition:all .15s; display:flex; align-items:center; gap:7px;
+    }
+    .pay-tab:hover { border-color:rgba(255,255,255,.3); color:#ccc; }
+    .pay-tab.active { border-color:#e50914; background:rgba(229,9,20,.08); color:#fff; }
+    .pay-tab .tab-icon { font-size:1.1rem; }
+
+    /* Submit button */
+    .btn-pay {
+      width:100%; padding:15px; background:#e50914; color:#fff;
+      border:none; border-radius:8px; font-family:'DM Sans',sans-serif;
+      font-size:1rem; font-weight:700; cursor:pointer; margin-top:8px;
+      transition:background .2s, transform .1s; position:relative;
+    }
+    .btn-pay:hover { background:#c1060f; }
+    .btn-pay:active { transform:scale(.99); }
+    .btn-pay:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-pay .spinner { display:none; width:18px; height:18px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; margin:0 auto; }
+    .btn-pay.loading .btn-text { display:none; }
+    .btn-pay.loading .spinner { display:block; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+
+    /* UPI panel */
+    .upi-panel { text-align:center; padding:24px 0 8px; }
+    .upi-panel .upi-id-wrap { display:flex; gap:10px; max-width:340px; margin:16px auto 0; }
+    .upi-panel input { flex:1; padding:12px 14px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:7px; color:#fff; font-family:'DM Sans',sans-serif; font-size:.9rem; outline:none; }
+    .upi-panel input:focus { border-color:rgba(229,9,20,.5); }
+
+    /* Success screen */
+    .success-screen { text-align:center; padding:48px 20px; animation:fadeUp .4s ease both; }
+    .success-screen .checkmark { font-size:3.5rem; margin-bottom:16px; display:block; animation:popIn .4s cubic-bezier(.22,1,.36,1); }
+    @keyframes popIn { from{transform:scale(.5);opacity:0} to{transform:scale(1);opacity:1} }
+    .success-screen h3 { font-family:'Bebas Neue',cursive; font-size:1.8rem; letter-spacing:2px; margin-bottom:8px; }
+    .success-screen p { color:#888; font-size:.9rem; max-width:320px; margin:0 auto 24px; line-height:1.6; }
+    .btn-primary { padding:12px 32px; background:#e50914; color:#fff; border:none; border-radius:7px; font-family:'DM Sans',sans-serif; font-size:.95rem; font-weight:600; cursor:pointer; transition:background .2s; text-decoration:none; display:inline-block; }
+    .btn-primary:hover { background:#c1060f; }
+
+    /* Plan change confirm modal */
+    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.8); display:flex; align-items:center; justify-content:center; z-index:200; padding:20px; }
+    .modal-box { background:#1a1a1a; border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:36px 40px; max-width:440px; width:100%; animation:fadeUp .25s ease; }
+    .modal-box h3 { font-size:1.1rem; margin:0 0 10px; }
+    .modal-box p  { color:#888; font-size:.88rem; line-height:1.6; margin:0 0 24px; }
+    .modal-btns { display:flex; gap:12px; justify-content:flex-end; }
+    .btn-cancel { padding:10px 22px; background:rgba(255,255,255,.07); color:#ccc; border:1px solid rgba(255,255,255,.1); border-radius:7px; font-family:'DM Sans',sans-serif; font-size:.9rem; cursor:pointer; transition:background .15s; }
+    .btn-cancel:hover { background:rgba(255,255,255,.12); }
+    .hidden { display:none!important; }
+
+    /* Responsive */
+    @media(max-width:600px){ .card{ padding:20px 18px; } .billing-layout{ padding:32px 16px 80px; } }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <a href="index.html" class="logo" style="text-decoration:none;">NETFLIX</a>
+    <nav class="nav-desktop">
+      <a href="index.html">Home</a>
+      <a href="mylist.html">My List</a>
+      <a href="profile.html">Profile</a>
+      <a href="settings.html">Settings</a>
+    </nav>
+    <div class="nav-actions">
+      <div class="user-menu">
+        <div class="avatar" id="avatarBtn">U</div>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="dropdown-name">Signed in as<strong id="dropdownName">User</strong></div>
+          <a href="profile.html"  class="dropdown-item">My Profile</a>
+          <a href="settings.html" class="dropdown-item">Account Settings</a>
+          <a href="billing.html"  class="dropdown-item">Billing</a>
+          <a href="mylist.html"   class="dropdown-item">My List</a>
+          <a href="#" class="dropdown-item logout" id="logoutBtn">Sign Out</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="billing-layout" id="mainLayout">
+
+    <div class="page-title">Subscription & Billing</div>
+    <p class="page-subtitle">Manage your plan, payment method, and billing history.</p>
+
+    <!-- CURRENT PLAN STATUS -->
+    <div class="card">
+      <div class="card-title">Current Subscription</div>
+      <div class="status-row">
+        <div class="status-label">
+          <h4>Plan</h4>
+          <p>Enjoying unlimited streaming on all devices.</p>
+        </div>
+        <span class="badge-plan" id="currentPlanBadge">★ Standard</span>
+      </div>
+      <div class="status-row">
+        <div class="status-label">
+          <h4>Status</h4>
+          <p>Your subscription renews automatically.</p>
+        </div>
+        <span class="badge-active">Active</span>
+      </div>
+      <div class="status-row">
+        <div class="status-label">
+          <h4>Next Billing Date</h4>
+          <p id="nextBillingDate">April 20, 2026</p>
+        </div>
+        <button class="btn-outline" id="btnChangePlan">Change Plan</button>
+      </div>
+      <div class="status-row">
+        <div class="status-label">
+          <h4>Payment Method</h4>
+          <p id="payMethodDisplay">Visa •••• 4242</p>
+        </div>
+        <button class="btn-outline" id="btnUpdatePayment">Update</button>
+      </div>
+      <div class="status-row">
+        <div class="status-label">
+          <h4 style="color:#f87171;">Cancel Subscription</h4>
+          <p>You'll keep access until the end of your billing period.</p>
+        </div>
+        <button class="btn-danger-sm" id="btnCancel">Cancel</button>
+      </div>
+    </div>
+
+    <!-- CHOOSE A PLAN (hidden until Change Plan clicked) -->
+    <div class="card hidden" id="planPickerCard">
+      <div class="card-title">Choose a Plan</div>
+      <div class="plans-grid">
+
+        <div class="plan-card" data-plan="mobile" data-price="149">
+          <div class="plan-name">Mobile</div>
+          <div class="plan-price">₹149<span>/mo</span></div>
+          <div class="plan-quality">480p · SD</div>
+          <ul class="plan-features">
+            <li>Mobile & tablet only</li>
+            <li>1 screen at a time</li>
+            <li>Unlimited movies & TV</li>
+          </ul>
+        </div>
+
+        <div class="plan-card selected" data-plan="standard" data-price="499">
+          <div class="plan-popular">Most Popular</div>
+          <div class="plan-name">Standard</div>
+          <div class="plan-price">₹499<span>/mo</span></div>
+          <div class="plan-quality">1080p · Full HD</div>
+          <ul class="plan-features">
+            <li>TV, laptop, mobile</li>
+            <li>2 screens at a time</li>
+            <li>Download on 2 devices</li>
+          </ul>
+        </div>
+
+        <div class="plan-card" data-plan="premium" data-price="649">
+          <div class="plan-name">Premium</div>
+          <div class="plan-price">₹649<span>/mo</span></div>
+          <div class="plan-quality">4K + HDR · Ultra HD</div>
+          <ul class="plan-features">
+            <li>All devices</li>
+            <li>4 screens at a time</li>
+            <li>Download on 6 devices</li>
+          </ul>
+        </div>
+
+      </div>
+      <div style="display:flex;gap:12px;margin-top:20px;justify-content:flex-end;">
+        <button class="btn-cancel" id="btnCancelPlanChange">Cancel</button>
+        <button class="btn-primary" id="btnConfirmPlanChange">Confirm Plan</button>
+      </div>
+    </div>
+
+    <!-- PAYMENT METHOD FORM -->
+    <div class="card hidden" id="paymentCard">
+      <div class="card-title">Payment Method</div>
+
+      <!-- Method tabs -->
+      <div class="pay-tabs">
+        <button class="pay-tab active" data-method="card">
+          <span class="tab-icon">💳</span> Credit / Debit Card
+        </button>
+        <button class="pay-tab" data-method="upi">
+          <span class="tab-icon">📱</span> UPI
+        </button>
+        <button class="pay-tab" data-method="netbanking">
+          <span class="tab-icon">🏦</span> Net Banking
+        </button>
+      </div>
+
+      <!-- CARD PANEL -->
+      <div id="panel-card" class="pay-form open">
+        <div class="field">
+          <label>Cardholder Name</label>
+          <input type="text" id="cardName" placeholder="Name as on card"/>
+        </div>
+        <div class="field">
+          <label>Card Number</label>
+          <div class="card-input-wrap">
+            <input type="text" id="cardNumber" placeholder="0000 0000 0000 0000" maxlength="19"/>
+            <span class="card-brand" id="cardBrandIcon">💳</span>
+          </div>
+        </div>
+        <div class="field-row2">
+          <div class="field" style="margin-bottom:0">
+            <label>Expiry Date</label>
+            <input type="text" id="cardExpiry" placeholder="MM / YY" maxlength="7"/>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>CVV</label>
+            <input type="text" id="cardCvv" placeholder="•••" maxlength="4"/>
+          </div>
+        </div>
+        <div class="field" style="margin-top:16px;">
+          <label>Billing Zip / Postal Code</label>
+          <input type="text" id="cardZip" placeholder="e.g. 751001" maxlength="10"/>
+        </div>
+        <p class="secure-note">Your payment info is encrypted and never stored on our servers.</p>
+        <button class="btn-pay" id="btnPayCard">
+          <span class="btn-text" id="payBtnText">Save Payment Method</span>
+          <div class="spinner"></div>
+        </button>
+      </div>
+
+      <!-- UPI PANEL -->
+      <div id="panel-upi" class="pay-form">
+        <div class="upi-panel">
+          <p style="color:#888;font-size:.9rem;">Enter your UPI ID to set up autopay.</p>
+          <div style="display:flex;gap:10px;max-width:340px;margin:12px auto 0;">
+            <input type="text" id="upiId" placeholder="yourname@upi" style="flex:1;padding:12px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:7px;color:#fff;font-family:'DM Sans',sans-serif;font-size:.9rem;outline:none;"/>
+          </div>
+          <p class="secure-note" style="justify-content:center;margin-top:12px;">Supports GPay, PhonePe, Paytm, BHIM & more.</p>
+          <button class="btn-pay" id="btnPayUpi" style="max-width:340px;margin:16px auto 0;display:block;">
+            <span class="btn-text">Verify & Save UPI</span>
+            <div class="spinner"></div>
+          </button>
+        </div>
+      </div>
+
+      <!-- NET BANKING PANEL -->
+      <div id="panel-netbanking" class="pay-form">
+        <div class="field" style="max-width:360px;margin-top:8px;">
+          <label>Select Your Bank</label>
+          <select id="bankSelect">
+            <option value="">— Choose bank —</option>
+            <option>State Bank of India</option>
+            <option>HDFC Bank</option>
+            <option>ICICI Bank</option>
+            <option>Axis Bank</option>
+            <option>Kotak Mahindra Bank</option>
+            <option>Punjab National Bank</option>
+            <option>Bank of Baroda</option>
+            <option>Canara Bank</option>
+            <option>Yes Bank</option>
+            <option>IndusInd Bank</option>
+          </select>
+        </div>
+        <p class="secure-note">You'll be redirected to your bank's secure portal.</p>
+        <button class="btn-pay" id="btnPayNet" style="max-width:340px;">
+          <span class="btn-text">Proceed to Net Banking</span>
+          <div class="spinner"></div>
+        </button>
+      </div>
+
+      <div style="margin-top:16px;">
+        <button class="btn-cancel" id="btnCancelPayment">Cancel</button>
+      </div>
+    </div>
+
+    <!-- BILLING HISTORY -->
+    <div class="card" id="historyCard">
+      <div class="card-title">Billing History</div>
+      <div id="invoiceList"></div>
+    </div>
+
+  </div><!-- /billing-layout -->
+
+  <!-- CANCEL CONFIRM MODAL -->
+  <div class="modal-backdrop hidden" id="cancelModal">
+    <div class="modal-box">
+      <h3>Cancel Subscription?</h3>
+      <p>You'll lose access to all Netflix content at the end of your current billing period on <strong id="cancelDate">April 20, 2026</strong>. You can re-subscribe anytime.</p>
+      <div class="modal-btns">
+        <button class="btn-cancel" id="btnKeepSub">Keep Subscription</button>
+        <button class="btn-danger-sm" id="btnConfirmCancel" style="padding:10px 22px;">Yes, Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUCCESS SCREEN (hidden) -->
+  <div class="hidden" id="successScreen">
+    <div class="success-screen">
+      <span class="checkmark">✅</span>
+      <h3 id="successTitle">Payment Saved!</h3>
+      <p id="successMsg">Your payment method has been updated successfully.</p>
+      <a href="billing.html" class="btn-primary">Back to Billing</a>
+    </div>
+  </div>
+
+  <script src="profile-key.js"></script>
+  <script src="i18n.js"></script>
+  <script>
+  // ======== SESSION ========
+  const session = JSON.parse(localStorage.getItem('nf_session') || sessionStorage.getItem('nf_session') || 'null');
+  if (!session) { window.location.replace('auth.html'); }
+
+  const initial = session.name ? session.name.charAt(0).toUpperCase() : 'U';
+  const users   = JSON.parse(localStorage.getItem('nf_users') || '[]');
+  const cu      = users.find(u => u.email === session.email);
+  const aColor  = (cu && cu.avatarColor) || '#e50914';
+  document.getElementById('avatarBtn').textContent = initial;
+  document.getElementById('avatarBtn').style.background = aColor;
+  document.getElementById('dropdownName').textContent = session.name;
+
+  // ======== BILLING DATA (per account) ========
+  const BILLING_KEY = 'nf_billing_' + session.email;
+  function getBilling() {
+    return JSON.parse(localStorage.getItem(BILLING_KEY) || JSON.stringify({
+      plan: 'standard',
+      price: 499,
+      nextDate: 'April 20, 2026',
+      payMethod: 'Visa •••• 4242',
+      status: 'active',
+      history: [
+        { date:'Mar 20, 2026', amount:'₹499', plan:'Standard', status:'paid' },
+        { date:'Feb 20, 2026', amount:'₹499', plan:'Standard', status:'paid' },
+        { date:'Jan 20, 2026', amount:'₹499', plan:'Standard', status:'paid' },
+        { date:'Dec 20, 2025', amount:'₹499', plan:'Standard', status:'paid' },
+        { date:'Nov 20, 2025', amount:'₹149', plan:'Mobile',   status:'paid' },
+      ]
+    }));
+  }
+  function saveBilling(b) { localStorage.setItem(BILLING_KEY, JSON.stringify(b)); }
+
+  // ======== INIT ========
+  let billing = getBilling();
+  let selectedPlan = billing.plan;
+  let selectedPrice = billing.price;
+
+  function refreshStatus() {
+    const planNames = { mobile:'Mobile', standard:'Standard', premium:'Premium' };
+    document.getElementById('currentPlanBadge').textContent = '★ ' + (planNames[billing.plan] || 'Standard');
+    document.getElementById('nextBillingDate').textContent  = billing.nextDate;
+    document.getElementById('payMethodDisplay').textContent = billing.payMethod;
+    document.getElementById('cancelDate').textContent       = billing.nextDate;
+  }
+  refreshStatus();
+
+  // ======== BILLING HISTORY ========
+  function renderHistory() {
+    const list = getBilling().history;
+    document.getElementById('invoiceList').innerHTML = list.map((inv, i) => `
+      <div class="invoice-row">
+        <div class="invoice-date">${inv.date}</div>
+        <div style="font-size:.82rem;color:#888;flex:1;padding:0 12px;">${inv.plan} Plan</div>
+        <div class="invoice-amount">${inv.amount}</div>
+        <span class="invoice-status ${inv.status}">${inv.status}</span>
+        <button class="invoice-dl" title="Download receipt">⬇</button>
+      </div>
+    `).join('') || '<p style="color:#555;font-size:.9rem;">No billing history yet.</p>';
+  }
+  renderHistory();
+
+  // ======== PLAN PICKER ========
+  document.getElementById('btnChangePlan').addEventListener('click', () => {
+    document.getElementById('planPickerCard').classList.remove('hidden');
+    document.getElementById('planPickerCard').scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+  document.getElementById('btnCancelPlanChange').addEventListener('click', () => {
+    document.getElementById('planPickerCard').classList.add('hidden');
+  });
+
+  document.querySelectorAll('.plan-card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedPlan  = card.dataset.plan;
+      selectedPrice = parseInt(card.dataset.price);
+    });
+  });
+
+  document.getElementById('btnConfirmPlanChange').addEventListener('click', () => {
+    billing.plan  = selectedPlan;
+    billing.price = selectedPrice;
+    const planNames = { mobile:'Mobile', standard:'Standard', premium:'Premium' };
+    // Add to history
+    const today = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+    billing.history.unshift({ date:today, amount:'₹'+selectedPrice, plan:planNames[selectedPlan], status:'paid' });
+    saveBilling(billing);
+    document.getElementById('planPickerCard').classList.add('hidden');
+    refreshStatus();
+    renderHistory();
+    showToast('Plan updated to ' + planNames[selectedPlan] + '!');
+  });
+
+  // ======== PAYMENT METHOD ========
+  document.getElementById('btnUpdatePayment').addEventListener('click', () => {
+    document.getElementById('paymentCard').classList.remove('hidden');
+    document.getElementById('paymentCard').scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+  document.getElementById('btnCancelPayment').addEventListener('click', () => {
+    document.getElementById('paymentCard').classList.add('hidden');
+  });
+
+  // Method tabs
+  document.querySelectorAll('.pay-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.pay-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.pay-form').forEach(p => p.classList.remove('open'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.method).classList.add('open');
+    });
+  });
+
+  // Card number formatting + brand icon
+  document.getElementById('cardNumber').addEventListener('input', function() {
+    let v = this.value.replace(/\D/g,'').slice(0,16);
+    this.value = v.replace(/(.{4})/g,'$1 ').trim();
+    const brand = v.startsWith('4') ? '💳' : v.startsWith('5') ? '🟠' : v.startsWith('3') ? '🟡' : '💳';
+    document.getElementById('cardBrandIcon').textContent = brand;
+  });
+  document.getElementById('cardExpiry').addEventListener('input', function() {
+    let v = this.value.replace(/\D/g,'').slice(0,4);
+    if (v.length >= 3) v = v.slice(0,2) + ' / ' + v.slice(2);
+    this.value = v;
+  });
+  document.getElementById('cardCvv').addEventListener('input', function() {
+    this.value = this.value.replace(/\D/g,'').slice(0,4);
+  });
+
+  async function handlePayment(btnId, getDisplay) {
+    const btn = document.getElementById(btnId);
+    btn.classList.add('loading'); btn.disabled = true;
+    await new Promise(r => setTimeout(r, 1400));
+    btn.classList.remove('loading'); btn.disabled = false;
+
+    billing.payMethod = getDisplay();
+    saveBilling(billing);
+    refreshStatus();
+
+    // Show success
+    document.getElementById('mainLayout').classList.add('hidden');
+    document.getElementById('successScreen').classList.remove('hidden');
+  }
+
+  document.getElementById('btnPayCard').addEventListener('click', () => {
+    const name = document.getElementById('cardName').value.trim();
+    const num  = document.getElementById('cardNumber').value.replace(/\s/g,'');
+    const exp  = document.getElementById('cardExpiry').value.trim();
+    const cvv  = document.getElementById('cardCvv').value.trim();
+    if (!name || num.length < 16 || !exp || cvv.length < 3) { showToast('Please fill all card fields.', true); return; }
+    handlePayment('btnPayCard', () => {
+      const brand = num.startsWith('4') ? 'Visa' : num.startsWith('5') ? 'Mastercard' : 'Card';
+      return brand + ' •••• ' + num.slice(-4);
+    });
+  });
+
+  document.getElementById('btnPayUpi').addEventListener('click', () => {
+    const upi = document.getElementById('upiId').value.trim();
+    if (!upi || !upi.includes('@')) { showToast('Enter a valid UPI ID.', true); return; }
+    handlePayment('btnPayUpi', () => 'UPI — ' + upi);
+  });
+
+  document.getElementById('btnPayNet').addEventListener('click', () => {
+    const bank = document.getElementById('bankSelect').value;
+    if (!bank) { showToast('Please select a bank.', true); return; }
+    handlePayment('btnPayNet', () => 'Net Banking — ' + bank);
+  });
+
+  // ======== CANCEL SUBSCRIPTION ========
+  document.getElementById('btnCancel').addEventListener('click', () => {
+    document.getElementById('cancelModal').classList.remove('hidden');
+  });
+  document.getElementById('btnKeepSub').addEventListener('click', () => {
+    document.getElementById('cancelModal').classList.add('hidden');
+  });
+  document.getElementById('btnConfirmCancel').addEventListener('click', () => {
+    document.getElementById('cancelModal').classList.add('hidden');
+    billing.status = 'cancelled';
+    saveBilling(billing);
+    showToast('Subscription cancelled. Access until ' + billing.nextDate + '.');
+    document.querySelector('.badge-active').textContent = 'Cancelled';
+    document.querySelector('.badge-active').style.background = 'rgba(248,113,113,.1)';
+    document.querySelector('.badge-active').style.color = '#f87171';
+    document.querySelector('.badge-active').style.borderColor = 'rgba(248,113,113,.25)';
+  });
+  document.getElementById('cancelModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('cancelModal')) document.getElementById('cancelModal').classList.add('hidden');
+  });
+
+  // ======== TOAST ========
+  function showToast(msg, isErr) {
+    let t = document.getElementById('bill-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'bill-toast';
+      t.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,.96);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:12px 22px;color:#fff;font-size:.85rem;opacity:0;transition:opacity .3s;z-index:300;white-space:nowrap;pointer-events:none;';
+      document.body.appendChild(t);
+    }
+    t.textContent = isErr ? '✕ ' + msg : '✓ ' + msg;
+    t.style.color = isErr ? '#f87171' : '#4ade80';
+    t.style.opacity = '1';
+    clearTimeout(t._t);
+    t._t = setTimeout(() => { t.style.opacity = '0'; }, 3000);
+  }
+
+  // ======== DROPDOWN / LOGOUT ========
+  const avatarBtn = document.getElementById('avatarBtn');
+  const dropdown  = document.getElementById('userDropdown');
+  avatarBtn.addEventListener('click', e => { e.stopPropagation(); dropdown.classList.toggle('open'); });
+  document.addEventListener('click', () => dropdown.classList.remove('open'));
+  dropdown.addEventListener('click', e => e.stopPropagation());
+  document.getElementById('logoutBtn').addEventListener('click', e => {
+    e.preventDefault();
+    localStorage.removeItem('nf_session'); sessionStorage.removeItem('nf_session');
+    window.location.href = 'auth.html';
+  });
+  </script>
+</body>
+</html>

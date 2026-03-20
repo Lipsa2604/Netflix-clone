@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Netflix Clone — Parental Controls</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;font-family:'DM Sans',sans-serif;background:#141414;color:#fff;-webkit-font-smoothing:antialiased}
+
+    .pin-screen {
+      min-height:100vh;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      padding:40px 20px;
+      background:radial-gradient(ellipse at center, #1a1a2e 0%, #141414 70%);
+      animation:fadeIn .4s ease both;
+    }
+    @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+    .logo { font-family:'Bebas Neue',cursive; color:#e50914; font-size:2rem; letter-spacing:3px; position:absolute; top:28px; left:40px; text-decoration:none; }
+
+    .kids-icon { font-size:3.2rem; margin-bottom:16px; animation:bounce .6s ease both .2s; }
+    @keyframes bounce{0%{transform:scale(.5)}70%{transform:scale(1.12)}100%{transform:scale(1)}}
+
+    h1 { font-family:'Bebas Neue',cursive; font-size:1.8rem; letter-spacing:2px; margin-bottom:8px; text-align:center; }
+    .sub { font-size:.88rem; color:#888; text-align:center; margin-bottom:36px; max-width:280px; line-height:1.5; }
+
+    /* PIN DOTS */
+    .pin-dots { display:flex; gap:14px; margin-bottom:28px; }
+    .pin-dot {
+      width:18px; height:18px; border-radius:50%;
+      background:rgba(255,255,255,.12); border:2px solid rgba(255,255,255,.2);
+      transition:background .15s, border-color .15s, transform .1s;
+    }
+    .pin-dot.filled { background:#e50914; border-color:#e50914; transform:scale(1.1); }
+    .pin-dot.error  { background:#f87171; border-color:#f87171; animation:shake .35s ease; }
+    @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+
+    /* NUMPAD */
+    .numpad {
+      display:grid; grid-template-columns:repeat(3,72px); gap:12px;
+      margin-bottom:20px;
+    }
+    .num-btn {
+      width:72px; height:72px; border-radius:50%;
+      background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1);
+      color:#fff; font-family:'DM Sans',sans-serif; font-size:1.3rem; font-weight:500;
+      cursor:pointer; transition:background .15s, transform .1s;
+      display:flex; align-items:center; justify-content:center;
+      user-select:none;
+    }
+    .num-btn:hover  { background:rgba(255,255,255,.15); }
+    .num-btn:active { transform:scale(.92); background:rgba(255,255,255,.2); }
+    .num-btn.zero   { grid-column:2; }
+    .num-btn.del    { background:transparent; border-color:transparent; font-size:1rem; color:#888; }
+    .num-btn.del:hover { background:rgba(255,255,255,.07); color:#fff; }
+
+    .error-msg { font-size:.82rem; color:#f87171; text-align:center; min-height:20px; margin-bottom:8px; animation:fadeIn .2s ease; }
+
+    .forgot-link { font-size:.82rem; color:#888; cursor:pointer; text-decoration:none; }
+    .forgot-link:hover { color:#fff; text-decoration:underline; }
+
+    /* SET PIN FORM (first time) */
+    .set-pin-box {
+      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+      border-radius:12px; padding:32px 36px; max-width:380px; width:100%;
+      text-align:center;
+    }
+    .set-pin-box h2 { font-size:1.2rem; font-weight:500; margin-bottom:8px; }
+    .set-pin-box p  { font-size:.85rem; color:#888; margin-bottom:24px; line-height:1.5; }
+    .pin-input-row  { display:flex; gap:12px; justify-content:center; margin-bottom:20px; }
+    .pin-digit {
+      width:52px; height:62px; text-align:center;
+      background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12);
+      border-radius:8px; color:#fff; font-size:1.6rem; font-weight:700; outline:none;
+      transition:border-color .2s, box-shadow .2s;
+      caret-color:transparent;
+    }
+    .pin-digit:focus { border-color:rgba(229,9,20,.6); box-shadow:0 0 0 3px rgba(229,9,20,.12); }
+    .btn-set-pin {
+      width:100%; padding:14px; background:#e50914; color:#fff;
+      border:none; border-radius:8px; font-family:'DM Sans',sans-serif;
+      font-size:.95rem; font-weight:700; cursor:pointer; transition:background .2s;
+    }
+    .btn-set-pin:hover { background:#c1060f; }
+    .btn-set-pin:disabled { opacity:.5; cursor:not-allowed; }
+    .note-text { font-size:.75rem; color:#555; margin-top:14px; line-height:1.5; }
+
+    .hidden{display:none!important}
+
+    /* Attempts warning */
+    .attempts-bar {
+      display:flex; gap:6px; margin-bottom:16px;
+    }
+    .attempt-dot {
+      width:10px; height:10px; border-radius:50%;
+      background:#e50914; transition:background .2s;
+    }
+    .attempt-dot.used { background:rgba(255,255,255,.15); }
+  </style>
+</head>
+<body>
+
+  <a href="profiles.html" class="logo">NETFLIX</a>
+
+  <!-- ENTER PIN SCREEN -->
+  <div class="pin-screen" id="enterPinScreen">
+    <div class="kids-icon">🔒</div>
+    <h1>Parental Controls</h1>
+    <p class="sub" id="pinSubtitle">Enter your 4-digit PIN to access the <strong id="profileNameLabel">Kids</strong> profile.</p>
+
+    <div class="attempts-bar" id="attemptsBar">
+      <div class="attempt-dot" id="a1"></div>
+      <div class="attempt-dot" id="a2"></div>
+      <div class="attempt-dot" id="a3"></div>
+    </div>
+
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+    </div>
+
+    <div class="numpad">
+      <button class="num-btn" data-n="1">1</button>
+      <button class="num-btn" data-n="2">2</button>
+      <button class="num-btn" data-n="3">3</button>
+      <button class="num-btn" data-n="4">4</button>
+      <button class="num-btn" data-n="5">5</button>
+      <button class="num-btn" data-n="6">6</button>
+      <button class="num-btn" data-n="7">7</button>
+      <button class="num-btn" data-n="8">8</button>
+      <button class="num-btn" data-n="9">9</button>
+      <button class="num-btn zero" data-n="0">0</button>
+      <button class="num-btn del" id="delBtn">⌫</button>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+    <a class="forgot-link" id="forgotLink">Forgot PIN?</a>
+  </div>
+
+  <!-- SET PIN SCREEN (first time) -->
+  <div class="pin-screen hidden" id="setPinScreen">
+    <div class="kids-icon">🛡️</div>
+    <div class="set-pin-box">
+      <h2 id="setPinTitle">Set a Parental PIN</h2>
+      <p id="setPinDesc">Create a 4-digit PIN to protect the <strong id="setPinProfileName">Kids</strong> profile. You'll need this to access it.</p>
+      <div class="pin-input-row" id="pinInputRow">
+        <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" pattern="[0-9]" id="pd0"/>
+        <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" pattern="[0-9]" id="pd1"/>
+        <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" pattern="[0-9]" id="pd2"/>
+        <input class="pin-digit" maxlength="1" type="password" inputmode="numeric" pattern="[0-9]" id="pd3"/>
+      </div>
+      <div class="error-msg" id="setPinError"></div>
+      <button class="btn-set-pin" id="btnSetPin" disabled>Set PIN & Continue</button>
+      <p class="note-text">This PIN applies to your whole account. Store it somewhere safe — it protects all Kids profiles.</p>
+    </div>
+  </div>
+
+  <!-- LOCKED SCREEN (too many attempts) -->
+  <div class="pin-screen hidden" id="lockedScreen">
+    <div class="kids-icon">🚫</div>
+    <h1>Account Locked</h1>
+    <p class="sub">Too many incorrect attempts. Please wait <strong id="lockTimer">30</strong> seconds.</p>
+  </div>
+
+<script>
+// ======== SESSION + PARAMS ========
+const session = JSON.parse(localStorage.getItem('nf_session') || sessionStorage.getItem('nf_session') || 'null');
+if (!session) { window.location.replace('auth.html'); }
+
+// Read which profile we're entering from URL ?profileId=xxx&profileName=xxx
+const params      = new URLSearchParams(window.location.search);
+const profileId   = params.get('profileId')   || '';
+const profileName = params.get('profileName') || 'Kids';
+const returnTo    = params.get('returnTo')    || 'index.html';
+
+document.getElementById('profileNameLabel').textContent = profileName;
+document.getElementById('setPinProfileName').textContent = profileName;
+
+// ======== PIN STORAGE (account-level, not per-profile) ========
+const PIN_KEY = 'nf_parental_pin_' + session.email;
+function getStoredPin() { return localStorage.getItem(PIN_KEY) || null; }
+function savePin(pin)   { localStorage.setItem(PIN_KEY, pin); }
+
+// ======== DECIDE: set or enter ========
+const storedPin = getStoredPin();
+if (!storedPin) {
+  // No PIN set yet — show set-PIN screen
+  document.getElementById('enterPinScreen').classList.add('hidden');
+  document.getElementById('setPinScreen').classList.remove('hidden');
+} else {
+  document.getElementById('enterPinScreen').classList.remove('hidden');
+  document.getElementById('setPinScreen').classList.add('hidden');
+}
+
+// ======== SET PIN LOGIC ========
+const pinDigits = [
+  document.getElementById('pd0'),
+  document.getElementById('pd1'),
+  document.getElementById('pd2'),
+  document.getElementById('pd3'),
+];
+
+pinDigits.forEach((inp, i) => {
+  inp.addEventListener('input', () => {
+    inp.value = inp.value.replace(/\D/g,'').slice(-1);
+    if (inp.value && i < 3) pinDigits[i+1].focus();
+    const allFilled = pinDigits.every(d => d.value.length === 1);
+    document.getElementById('btnSetPin').disabled = !allFilled;
+    document.getElementById('setPinError').textContent = '';
+  });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Backspace' && !inp.value && i > 0) { pinDigits[i-1].focus(); }
+  });
+});
+
+document.getElementById('btnSetPin').addEventListener('click', () => {
+  const pin = pinDigits.map(d => d.value).join('');
+  if (pin.length !== 4) return;
+  if (/^(\d)\1{3}$/.test(pin)) {
+    document.getElementById('setPinError').textContent = 'PIN cannot be 4 identical digits.';
+    return;
+  }
+  savePin(pin);
+  // Switch to enter-PIN screen to confirm
+  document.getElementById('setPinScreen').classList.add('hidden');
+  document.getElementById('enterPinScreen').classList.remove('hidden');
+  document.getElementById('pinSubtitle').innerHTML = `PIN set! Enter it now to continue to <strong>${profileName}</strong>.`;
+});
+
+// ======== ENTER PIN LOGIC ========
+let entered  = '';
+let attempts = 3;
+
+function updateDots() {
+  const dots = document.querySelectorAll('.pin-dot');
+  dots.forEach((d, i) => {
+    d.classList.toggle('filled', i < entered.length);
+    d.classList.remove('error');
+  });
+}
+
+function shakeError(msg) {
+  const dots = document.querySelectorAll('.pin-dot');
+  dots.forEach(d => d.classList.add('error'));
+  document.getElementById('errorMsg').textContent = msg;
+  setTimeout(() => { dots.forEach(d => d.classList.remove('error')); }, 500);
+}
+
+function updateAttempts() {
+  ['a1','a2','a3'].forEach((id, i) => {
+    document.getElementById(id).classList.toggle('used', i >= attempts);
+  });
+}
+
+document.querySelectorAll('.num-btn[data-n]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (entered.length >= 4) return;
+    entered += btn.dataset.n;
+    updateDots();
+    if (entered.length === 4) {
+      setTimeout(() => checkPin(), 120);
+    }
+  });
+});
+
+document.getElementById('delBtn').addEventListener('click', () => {
+  entered = entered.slice(0,-1);
+  document.getElementById('errorMsg').textContent = '';
+  updateDots();
+});
+
+// Keyboard support
+document.addEventListener('keydown', e => {
+  if (document.getElementById('enterPinScreen').classList.contains('hidden')) return;
+  if (/^[0-9]$/.test(e.key) && entered.length < 4) {
+    entered += e.key;
+    updateDots();
+    if (entered.length === 4) setTimeout(() => checkPin(), 120);
+  }
+  if (e.key === 'Backspace') {
+    entered = entered.slice(0,-1);
+    document.getElementById('errorMsg').textContent = '';
+    updateDots();
+  }
+});
+
+function checkPin() {
+  const pin = getStoredPin();
+  if (entered === pin) {
+    // ✅ Correct — set active profile & redirect
+    localStorage.setItem('nf_active_profile_' + session.email, profileId);
+    const s = JSON.parse(localStorage.getItem('nf_session') || '{}');
+    s.activeProfile = profileName;
+    // Get profile color
+    const profiles = JSON.parse(localStorage.getItem('nf_profiles_' + session.email) || '[]');
+    const p = profiles.find(pr => pr.id === profileId);
+    s.activeProfileColor = p ? p.color : '#1565c0';
+    localStorage.setItem('nf_session', JSON.stringify(s));
+    window.location.href = returnTo;
+  } else {
+    attempts--;
+    updateAttempts();
+    if (attempts <= 0) {
+      lockScreen();
+    } else {
+      shakeError(`Incorrect PIN. ${attempts} attempt${attempts===1?'':'s'} remaining.`);
+    }
+    entered = '';
+    updateDots();
+  }
+}
+
+// ======== LOCK SCREEN ========
+function lockScreen() {
+  document.getElementById('enterPinScreen').classList.add('hidden');
+  document.getElementById('lockedScreen').classList.remove('hidden');
+  let secs = 30;
+  const timer = setInterval(() => {
+    secs--;
+    document.getElementById('lockTimer').textContent = secs;
+    if (secs <= 0) {
+      clearInterval(timer);
+      attempts = 3;
+      updateAttempts();
+      entered = '';
+      updateDots();
+      document.getElementById('errorMsg').textContent = '';
+      document.getElementById('lockedScreen').classList.add('hidden');
+      document.getElementById('enterPinScreen').classList.remove('hidden');
+    }
+  }, 1000);
+}
+
+// ======== FORGOT PIN ========
+document.getElementById('forgotLink').addEventListener('click', () => {
+  const confirm = window.confirm('Reset your parental PIN? You will need to set a new one.');
+  if (confirm) {
+    localStorage.removeItem(PIN_KEY);
+    attempts = 3;
+    entered  = '';
+    updateDots();
+    document.getElementById('errorMsg').textContent = '';
+    document.getElementById('enterPinScreen').classList.add('hidden');
+    document.getElementById('setPinScreen').classList.remove('hidden');
+    pinDigits.forEach(d => { d.value = ''; });
+    document.getElementById('btnSetPin').disabled = true;
+    document.getElementById('setPinTitle').textContent = 'Reset Parental PIN';
+    document.getElementById('setPinDesc').innerHTML = `Set a new 4-digit PIN for the <strong>${profileName}</strong> profile.`;
+  }
+});
+</script>
+</body>
+</html>

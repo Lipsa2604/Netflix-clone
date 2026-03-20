@@ -132,6 +132,11 @@ function renderProfiles() {
     `;
     card.addEventListener('click', () => {
       if (manageMode) { openModal('edit', p); return; }
+      // Kids profiles require PIN lock
+      if (p.kids) {
+        window.location.href = `pin-lock.html?profileId=${encodeURIComponent(p.id)}&profileName=${encodeURIComponent(p.name)}&returnTo=index.html`;
+        return;
+      }
       setActive(p.id);
       const s = JSON.parse(localStorage.getItem('nf_session') || '{}');
       s.activeProfile = p.name;

@@ -46,12 +46,26 @@
     <a href="profiles.html" class="logo" style="text-decoration:none;">NETFLIX</a>
     <nav class="nav-desktop">
       <a href="index.html">Home</a>
+      <a href="search.html">🔍 AI Search</a>
+      <a href="mood.html">😊 Mood</a>
+      <a href="watchparty.html">🎉 Watch Party</a>
       <a href="mylist.html">My List</a>
       <a href="profile.html">Profile</a>
       <a href="settings.html">Settings</a>
     </nav>
     <div class="nav-actions">
-      <input id="search" class="search" placeholder="Search" />
+      <input id="search" class="search" placeholder="🔍 AI Search…"
+        onclick="window.location.href='search.html'"
+        onkeydown="if(event.key==='Enter'&&this.value.trim())window.location.href='search.html?q='+encodeURIComponent(this.value.trim())"
+        readonly style="cursor:pointer;" />
+      <!-- AI VOICE SEARCH BUTTON -->
+      <button id="voiceBtn" title="Voice Search" aria-label="Voice search" style="
+        background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+        color:#fff;border-radius:8px;padding:8px 12px;cursor:pointer;
+        font-size:1rem;transition:all .2s;display:flex;align-items:center;gap:6px;
+        font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:500;
+        white-space:nowrap;flex-shrink:0;
+      ">🎤 Voice</button>
       <button id="hamburger" class="hamburger" aria-label="Open menu">☰</button>
       <div class="user-menu">
         <div class="avatar" id="avatarBtn" title="Account">U</div>
@@ -62,6 +76,7 @@
           <a href="profiles.html" class="dropdown-item">Switch Profile</a>
           <a href="profile.html"  class="dropdown-item">My Profile</a>
           <a href="settings.html" class="dropdown-item">Account Settings</a>
+          <a href="billing.html"  class="dropdown-item">Billing</a>
           <a href="mylist.html"   class="dropdown-item">My List</a>
           <a href="#" class="dropdown-item logout" id="logoutBtn">Sign Out</a>
         </div>
@@ -90,12 +105,118 @@
       <p>The epic conclusion to the Infinity Saga. Heroes unite to save the universe.</p>
       <div class="hero-buttons">
         <button class="btn play-hero" data-videoid="hA6hldpSTF8">▶ Play</button>
-        <button class="btn info-hero">ℹ More Info</button>
+        <button class="btn info-hero" onclick="window.location.href='movie.html?title=Avengers%3A+Endgame'">ℹ More Info</button>
+        <button class="btn info-hero" id="surpriseBtn" style="background:rgba(229,9,20,.25);border:1px solid rgba(229,9,20,.4);color:#fff;">🎲 Surprise Me</button>
       </div>
     </div>
   </section>
 
   <main id="rowsContainer" class="rows"></main>
+
+  <!-- VOICE SEARCH MODAL -->
+  <div id="voiceModal" style="
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);
+    z-index:500;align-items:center;justify-content:center;padding:20px;
+    backdrop-filter:blur(8px);
+  ">
+    <div style="
+      background:linear-gradient(135deg,#0f0f0f,#1a1a1a);
+      border:1px solid rgba(255,255,255,.1);border-radius:20px;
+      padding:44px 40px;max-width:520px;width:100%;text-align:center;
+      animation:voicePop .35s cubic-bezier(.22,1,.36,1) both;
+      position:relative;
+    ">
+      <button id="voiceClose" style="
+        position:absolute;top:14px;right:16px;background:none;border:none;
+        color:#666;font-size:1.2rem;cursor:pointer;
+      ">✕</button>
+
+      <!-- MIC ANIMATION -->
+      <div id="micRing" style="
+        width:100px;height:100px;border-radius:50%;
+        background:rgba(229,9,20,.12);border:2px solid rgba(229,9,20,.3);
+        display:flex;align-items:center;justify-content:center;
+        margin:0 auto 24px;transition:all .3s;position:relative;
+      ">
+        <div id="micPulse" style="
+          position:absolute;inset:-8px;border-radius:50%;
+          border:2px solid rgba(229,9,20,.2);
+          animation:none;
+        "></div>
+        <div id="micPulse2" style="
+          position:absolute;inset:-18px;border-radius:50%;
+          border:2px solid rgba(229,9,20,.1);
+          animation:none;
+        "></div>
+        <span id="micIcon" style="font-size:2.4rem;">🎤</span>
+      </div>
+
+      <h2 id="voiceTitle" style="
+        font-family:'Bebas Neue',cursive;font-size:1.8rem;
+        letter-spacing:2px;margin:0 0 8px;
+      ">Say Something</h2>
+      <p id="voiceSubtitle" style="color:#888;font-size:.9rem;margin:0 0 24px;line-height:1.5;">
+        Tell me what you're in the mood for.<br/>
+        <em style="color:#666;">"Something thrilling", "a movie to cry to", "fun for the whole family"</em>
+      </p>
+
+      <!-- TRANSCRIPT DISPLAY -->
+      <div id="voiceTranscript" style="
+        min-height:44px;padding:12px 18px;
+        background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+        border-radius:10px;font-size:.95rem;color:#ccc;
+        margin-bottom:20px;line-height:1.5;display:none;
+        font-style:italic;
+      "></div>
+
+      <!-- AI THINKING -->
+      <div id="voiceThinking" style="display:none;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px;color:#e50914;font-size:.88rem;font-weight:500;">
+          <div style="display:flex;gap:4px;">
+            <span style="width:7px;height:7px;border-radius:50%;background:#e50914;display:inline-block;animation:voiceDot 1.2s ease infinite;"></span>
+            <span style="width:7px;height:7px;border-radius:50%;background:#e50914;display:inline-block;animation:voiceDot 1.2s ease .2s infinite;"></span>
+            <span style="width:7px;height:7px;border-radius:50%;background:#e50914;display:inline-block;animation:voiceDot 1.2s ease .4s infinite;"></span>
+          </div>
+          Claude is finding matches…
+        </div>
+      </div>
+
+      <!-- RESULTS PREVIEW -->
+      <div id="voiceResults" style="display:none;margin-bottom:20px;">
+        <div style="font-size:.72rem;color:#666;text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:10px;" id="voiceResultLabel"></div>
+        <div id="voiceResultGrid" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"></div>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div id="voiceActions" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button id="voiceStartBtn" style="
+          padding:13px 32px;background:#e50914;color:#fff;
+          border:none;border-radius:10px;font-family:'DM Sans',sans-serif;
+          font-size:1rem;font-weight:700;cursor:pointer;transition:background .2s;
+          display:flex;align-items:center;gap:8px;
+        ">🎤 Start Listening</button>
+        <button id="voiceSeeAllBtn" style="
+          display:none;padding:13px 24px;
+          background:rgba(255,255,255,.08);color:#ccc;
+          border:1px solid rgba(255,255,255,.15);border-radius:10px;
+          font-family:'DM Sans',sans-serif;font-size:.9rem;cursor:pointer;
+          transition:background .2s;
+        ">See All Results →</button>
+      </div>
+
+      <!-- ERROR -->
+      <div id="voiceError" style="display:none;color:#f87171;font-size:.82rem;margin-top:14px;"></div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes voicePop  { from{opacity:0;transform:scale(.85)} to{opacity:1;transform:scale(1)} }
+    @keyframes voiceDot  { 0%,100%{opacity:.3;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
+    @keyframes voiceRing { 0%,100%{transform:scale(1);opacity:.6} 50%{transform:scale(1.15);opacity:1} }
+    @keyframes voiceRing2{ 0%,100%{transform:scale(1);opacity:.3} 50%{transform:scale(1.2);opacity:.6} }
+    #voiceBtn:hover { background:rgba(229,9,20,.2)!important;border-color:rgba(229,9,20,.5)!important;color:#fff!important; }
+    #voiceBtn.listening { background:rgba(229,9,20,.3)!important;border-color:#e50914!important;color:#e50914!important;animation:voiceRing 1s ease infinite; }
+  </style>
 
   <div id="trailerModal" class="modal hidden" aria-hidden="true">
     <div class="modal-panel" role="dialog" aria-modal="true">
@@ -171,7 +292,401 @@
       });
     }
   </script>
+  <script src="profile-key.js"></script>
   <script src="i18n.js"></script>
   <script src="script.js"></script>
+
+  <script>
+  // ============================================================
+  //  VOICE SEARCH — Web Speech API + Claude AI
+  // ============================================================
+  const ALL_MOVIES_VOICE = [
+    { title:"Avengers: Endgame",        poster:"https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg",   videoId:"hA6hldpSTF8",   genres:["Action","Sci-Fi"],     mood:["epic","superhero","adventure","exciting"] },
+    { title:"The Dark Knight",          poster:"https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",   videoId:"EXeTwQWrcwY",   genres:["Action","Thriller"],   mood:["dark","intense","psychological","gritty"] },
+    { title:"Interstellar",             poster:"https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg",   videoId:"zSWdZVtXT7E",   genres:["Sci-Fi","Drama"],      mood:["emotional","beautiful","mind-bending","cry"] },
+    { title:"Spider-Man: No Way Home",  poster:"https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg",   videoId:"JfVOs4VSpmA",   genres:["Action","Sci-Fi"],     mood:["fun","superhero","exciting","family-friendly"] },
+    { title:"Black Panther",            poster:"https://image.tmdb.org/t/p/w500/uxzzxijgPIY7slzFvMotPv8wjKA.jpg",   videoId:"xjDjIWPwcPU",   genres:["Action","Sci-Fi"],     mood:["epic","superhero","exciting","adventure"] },
+    { title:"Inception",                poster:"https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",   videoId:"YoHD9XEInc0",   genres:["Thriller","Sci-Fi"],   mood:["mind-bending","psychological","thrilling"] },
+    { title:"Inglourious Basterds",     poster:"https://upload.wikimedia.org/wikipedia/en/c/c3/Inglourious_Basterds_poster.jpg", videoId:"KnrRy6kSFF0", genres:["Action","Drama"],  mood:["dark","intense","gritty","war"] },
+    { title:"Finding Nemo",             poster:"https://upload.wikimedia.org/wikipedia/en/2/29/Finding_Nemo.jpg",                videoId:"2zLkasScy7A",  genres:["Animation","Kids"], mood:["family-friendly","adventure","heartwarming","kids"] },
+    { title:"Frozen",                   poster:"https://upload.wikimedia.org/wikipedia/en/0/05/Frozen_%282013_film%29_poster.jpg",videoId:"TbQm5doF_Uc", genres:["Animation","Kids"], mood:["family-friendly","fun","musical","kids"] },
+    { title:"The Prestige",             poster:"https://upload.wikimedia.org/wikipedia/en/d/d2/Prestige_poster.jpg",             videoId:"ijXruSzfGEc",  genres:["Thriller","Drama"], mood:["mind-bending","mystery","psychological","twist"] },
+    { title:"Forrest Gump",             poster:"https://upload.wikimedia.org/wikipedia/en/6/67/Forrest_Gump_poster.jpg",         videoId:"bLvqoHBptjg",  genres:["Drama"],            mood:["emotional","inspiring","heartwarming","cry","moving"] },
+    { title:"La La Land",               poster:"https://upload.wikimedia.org/wikipedia/en/a/ab/La_La_Land_%28film%29.png",       videoId:"0pdqf4P9MB8",  genres:["Romance","Drama"],  mood:["romantic","beautiful","emotional","cry","dreamy"] },
+    { title:"Joker",                    poster:"https://upload.wikimedia.org/wikipedia/en/e/e1/Joker_%282019_film%29_poster.jpg",videoId:"zAGVQLHvwOY",  genres:["Thriller","Drama"], mood:["dark","psychological","intense","disturbing"] },
+    { title:"The Matrix",               poster:"https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",   videoId:"m8e-FF8MsqU",   genres:["Action","Sci-Fi"],     mood:["mind-bending","cool","exciting","revolutionary"] },
+    { title:"The Avengers",             poster:"https://image.tmdb.org/t/p/w500/RYMX2wcKCBAr24UyPD7xwmjaTn.jpg",    videoId:"eOrNdBpGMv8",   genres:["Action","Sci-Fi"],     mood:["fun","superhero","exciting","epic","adventure"] },
+    { title:"Mad Max: Fury Road",       poster:"https://image.tmdb.org/t/p/w500/8tZYtuWezp8JbcsvHYO0O46tFbo.jpg",   videoId:"hEJnMQG9ev8",   genres:["Action","Sci-Fi"],     mood:["adrenaline","intense","exciting","action-packed"] },
+    { title:"John Wick",                poster:"https://image.tmdb.org/t/p/w500/ziEuG1essDuWuC5lpWUaw1uXY2O.jpg",   videoId:"2AUmvWm5ZDQ",   genres:["Action","Thriller"],   mood:["adrenaline","intense","cool","action-packed"] },
+    { title:"The Lion King",            poster:"https://upload.wikimedia.org/wikipedia/en/3/3d/The_Lion_King_poster.jpg",        videoId:"7TavVZMewpY",  genres:["Animation","Kids"], mood:["emotional","family-friendly","classic","cry","moving"] },
+    { title:"The Shawshank Redemption", poster:"https://upload.wikimedia.org/wikipedia/en/8/81/ShawshankRedemptionMoviePoster.jpg",videoId:"6hB3S9bIaco",genres:["Drama"],            mood:["inspiring","emotional","hope","moving","cry"] },
+    { title:"Guardians of the Galaxy Vol. 2",poster:"https://image.tmdb.org/t/p/w500/y4MBh0EjBlMuOzv9axM4qJlmhzz.jpg",videoId:"dW1BIid8Osg",genres:["Action","Sci-Fi"],    mood:["fun","funny","adventure","exciting"] },
+    { title:"Doctor Strange in the Multiverse of Madness",poster:"https://image.tmdb.org/t/p/w500/9Gtg2DzBhmYamXBS1hKAhiwbBKS.jpg",videoId:"aWzlQ2N6qqg",genres:["Action","Sci-Fi"],mood:["dark","scary","exciting","superhero"] },
+    { title:"Eternal Sunshine",         poster:"https://image.tmdb.org/t/p/w500/5MwkWH9tYHv3mV9OdYTMR5qreIz.jpg",   videoId:"gHCzXHCJN9M",   genres:["Romance","Drama"],     mood:["emotional","romantic","sad","beautiful","cry"] },
+    { title:"Get Out",                  poster:"https://image.tmdb.org/t/p/w500/tFXcEccSQMf3lfhfXKSU9iRBpa3.jpg",   videoId:"DzfpyUB60YY",   genres:["Thriller","Horror"],   mood:["dark","psychological","scary","intense"] },
+    { title:"Knives Out",               poster:"https://image.tmdb.org/t/p/w500/pThyQovXQrws2Q07WV2B5K0HBsW.jpg",   videoId:"qGqiHJTsRkQ",   genres:["Thriller","Comedy"],   mood:["fun","mystery","witty","clever","entertaining"] },
+  ];
+
+  // ---- Voice modal state ----
+  let recognition = null;
+  let isListening  = false;
+  let lastQuery    = '';
+  let voiceResults = [];
+
+  const voiceModal    = document.getElementById('voiceModal');
+  const voiceBtn      = document.getElementById('voiceBtn');
+  const voiceClose    = document.getElementById('voiceClose');
+  const voiceStartBtn = document.getElementById('voiceStartBtn');
+  const voiceSeeAll   = document.getElementById('voiceSeeAllBtn');
+
+  // ---- Open / Close ----
+  voiceBtn.addEventListener('click', openVoiceModal);
+  voiceClose.addEventListener('click', closeVoiceModal);
+  voiceModal.addEventListener('click', e => { if (e.target === voiceModal) closeVoiceModal(); });
+
+  function openVoiceModal() {
+    voiceModal.style.display = 'flex';
+    resetVoiceUI();
+  }
+  function closeVoiceModal() {
+    stopListening();
+    voiceModal.style.display = 'none';
+  }
+
+  function resetVoiceUI() {
+    setMicState('idle');
+    document.getElementById('voiceTitle').textContent     = 'Say Something';
+    document.getElementById('voiceSubtitle').style.display = '';
+    document.getElementById('voiceTranscript').style.display = 'none';
+    document.getElementById('voiceThinking').style.display  = 'none';
+    document.getElementById('voiceResults').style.display   = 'none';
+    document.getElementById('voiceError').style.display     = 'none';
+    voiceStartBtn.style.display  = 'flex';
+    voiceStartBtn.textContent    = '🎤 Start Listening';
+    voiceSeeAll.style.display    = 'none';
+    lastQuery = ''; voiceResults = [];
+  }
+
+  // ---- Mic ring states ----
+  function setMicState(state) {
+    const ring  = document.getElementById('micRing');
+    const p1    = document.getElementById('micPulse');
+    const p2    = document.getElementById('micPulse2');
+    const icon  = document.getElementById('micIcon');
+    if (state === 'listening') {
+      ring.style.background = 'rgba(229,9,20,.25)';
+      ring.style.borderColor = '#e50914';
+      p1.style.animation = 'voiceRing 1.2s ease infinite';
+      p2.style.animation = 'voiceRing2 1.4s ease infinite';
+      icon.textContent = '🎙️';
+      voiceBtn.classList.add('listening');
+      voiceBtn.textContent = '🔴 Listening…';
+    } else if (state === 'thinking') {
+      ring.style.background = 'rgba(251,191,36,.1)';
+      ring.style.borderColor = 'rgba(251,191,36,.4)';
+      p1.style.animation = 'none';
+      p2.style.animation = 'none';
+      icon.textContent = '🤔';
+      voiceBtn.classList.remove('listening');
+      voiceBtn.textContent = '🎤 Voice';
+    } else {
+      ring.style.background = 'rgba(229,9,20,.12)';
+      ring.style.borderColor = 'rgba(229,9,20,.3)';
+      p1.style.animation = 'none';
+      p2.style.animation = 'none';
+      icon.textContent = '🎤';
+      voiceBtn.classList.remove('listening');
+      voiceBtn.textContent = '🎤 Voice';
+    }
+  }
+
+  // ---- Start voice recognition ----
+  voiceStartBtn.addEventListener('click', startListening);
+
+  function startListening() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      showVoiceError("Your browser doesn't support voice search. Try Chrome or Edge.");
+      return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    isListening = true;
+    setMicState('listening');
+    document.getElementById('voiceTitle').textContent     = 'Listening…';
+    document.getElementById('voiceSubtitle').style.display = 'none';
+    document.getElementById('voiceTranscript').style.display = 'block';
+    document.getElementById('voiceTranscript').textContent  = '…';
+    document.getElementById('voiceError').style.display     = 'none';
+    voiceStartBtn.textContent = '⏹ Stop';
+    voiceStartBtn.onclick = stopListening;
+
+    recognition.onresult = (e) => {
+      const transcript = Array.from(e.results)
+        .map(r => r[0].transcript).join('');
+      document.getElementById('voiceTranscript').textContent = '"' + transcript + '"';
+      if (e.results[0].isFinal) {
+        lastQuery = transcript;
+        stopListening();
+        askClaude(transcript);
+      }
+    };
+
+    recognition.onerror = (e) => {
+      stopListening();
+      if (e.error === 'no-speech') {
+        showVoiceError("No speech detected. Try again and speak clearly.");
+      } else if (e.error === 'not-allowed') {
+        showVoiceError("Microphone access denied. Please allow mic access in your browser.");
+      } else {
+        showVoiceError("Couldn't hear you. Please try again.");
+      }
+    };
+
+    recognition.onend = () => {
+      if (isListening && !lastQuery) {
+        stopListening();
+        showVoiceError("No speech detected. Tap the button and speak.");
+      }
+    };
+
+    recognition.start();
+  }
+
+  function stopListening() {
+    isListening = false;
+    if (recognition) { try { recognition.stop(); } catch(e){} }
+    setMicState('idle');
+    voiceStartBtn.textContent = '🎤 Try Again';
+    voiceStartBtn.onclick = startListening;
+  }
+
+  // ---- Smart Local NLP Matcher (no API needed — works offline) ----
+  async function askClaude(query) {
+    setMicState('thinking');
+    document.getElementById('voiceTitle').textContent = 'Finding matches…';
+    document.getElementById('voiceThinking').style.display = 'block';
+    voiceStartBtn.style.display = 'none';
+
+    // Simulate brief thinking delay for UX
+    await new Promise(r => setTimeout(r, 900));
+
+    const results = smartMatch(query);
+    const reasoning = generateReasoning(query, results);
+    showVoiceResults(results, reasoning);
+  }
+
+  // ---- Synonym & Intent Map ----
+  const INTENT_MAP = [
+    // Mood / emotion
+    { keys:['cry','sad','emotional','tears','moving','heartbreak','sob','weep'],           tags:['cry','emotional','moving','sad'] },
+    { keys:['happy','feel good','feelgood','cheerful','uplifting','upbeat','heartwarming'],tags:['heartwarming','fun','inspiring','family-friendly'] },
+    { keys:['scary','horror','terrify','terrifying','frightening','dark','creep','creepy'],tags:['scary','dark','disturbing','horror'] },
+    { keys:['funny','comedy','laugh','hilarious','humor','humour','witty','lighthearted'], tags:['fun','funny','witty','clever','entertaining'] },
+    { keys:['romantic','romance','love','date night','couple','relationship'],             tags:['romantic','beautiful','dreamy','emotional'] },
+    { keys:['adrenaline','thrilling','intense','edge of seat','heart pumping','hyped'],    tags:['adrenaline','intense','action-packed','exciting'] },
+    { keys:['mind bending','mind-bending','mindbending','twist','confusing','complex','brain','puzzle','psychological'],tags:['mind-bending','psychological','twist','complex'] },
+    { keys:['inspiring','inspirational','motivation','motivating','hopeful','hope'],       tags:['inspiring','hope','emotional','moving'] },
+    { keys:['adventure','adventurous','explore','journey','quest'],                        tags:['adventure','exciting','epic'] },
+    { keys:['epic','grand','spectacular','massive','big'],                                 tags:['epic','adventure','exciting','superhero'] },
+    { keys:['dark','gritty','noir','bleak','disturbing'],                                  tags:['dark','gritty','intense','psychological'] },
+    // Audience
+    { keys:['family','kids','children','child','whole family','with family'],              tags:['family-friendly','kids','fun'] },
+    { keys:['animated','animation','cartoon','pixar'],                                     tags:['kids','family-friendly','fun','musical'] },
+    // Genre keywords
+    { keys:['action','fight','combat','war','battle'],                                     tags:['action-packed','adrenaline','exciting','adventure'] },
+    { keys:['superhero','hero','marvel','dc','comic','powers'],                            tags:['superhero','epic','exciting','fun'] },
+    { keys:['sci-fi','science fiction','space','future','robot','alien','universe'],       tags:['mind-bending','exciting','adventure','cool'] },
+    { keys:['thriller','suspense','mystery','detective','crime'],                          tags:['psychological','intense','mystery','twist'] },
+    { keys:['drama','deep','serious','life','story','real'],                               tags:['emotional','inspiring','moving','beautiful'] },
+    { keys:['classic','old','vintage','timeless','masterpiece'],                           tags:['classic','emotional','inspiring'] },
+    { keys:['music','musical','song','dance','soundtrack'],                                tags:['musical','dreamy','romantic'] },
+    // Specific descriptions
+    { keys:['bored','nothing to watch','random','anything','surprise me'],                 tags:['exciting','fun','epic','adventure'] },
+    { keys:['short','quick','fast','under 2 hours'],                                       tags:['fun','entertaining'] },
+    { keys:['true story','based on','real','historical'],                                  tags:['inspiring','emotional','moving'] },
+    { keys:['beautiful','visually stunning','gorgeous','cinematic'],                       tags:['beautiful','dreamy','emotional'] },
+    { keys:['deep','meaningful','philosophical','thought provoking','thought-provoking'],  tags:['mind-bending','psychological','emotional','beautiful'] },
+  ];
+
+  function smartMatch(query) {
+    const q = query.toLowerCase()
+      .replace(/[^a-z0-9 '-]/g, ' ')
+      .replace(/\s+/g, ' ').trim();
+
+    // Collect matching mood/genre tags from query
+    const matchedTags = new Set();
+    const matchedGenres = new Set();
+
+    INTENT_MAP.forEach(({ keys, tags }) => {
+      if (keys.some(k => q.includes(k))) {
+        tags.forEach(t => matchedTags.add(t));
+      }
+    });
+
+    // Direct genre words
+    ['action','drama','thriller','romance','animation','comedy','horror','sci-fi','sci fi'].forEach(g => {
+      if (q.includes(g)) matchedGenres.add(g.replace(' ','-'));
+    });
+
+    // Score every movie
+    const scored = ALL_MOVIES_VOICE.map(m => {
+      let score = 0;
+
+      // Mood tag match
+      m.mood.forEach(tag => {
+        if (matchedTags.has(tag)) score += 3;
+      });
+
+      // Genre match
+      m.genres.forEach(g => {
+        if (matchedGenres.has(g.toLowerCase())) score += 4;
+        if (matchedTags.has(g.toLowerCase())) score += 2;
+      });
+
+      // Direct title word match
+      const titleWords = m.title.toLowerCase().split(' ');
+      titleWords.forEach(w => { if (q.includes(w) && w.length > 3) score += 5; });
+
+      // Word-by-word query match against all tags + genres
+      q.split(' ').forEach(word => {
+        if (word.length < 3) return;
+        m.mood.forEach(t => { if (t.includes(word) || word.includes(t)) score += 1; });
+        m.genres.forEach(g => { if (g.toLowerCase().includes(word)) score += 2; });
+      });
+
+      return { movie: m, score };
+    })
+    .filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6)
+    .map(x => x.movie);
+
+    // If nothing scored, return top varied picks
+    if (!scored.length) {
+      const words = q.split(' ').filter(w => w.length > 2);
+      const loose = ALL_MOVIES_VOICE.filter(m =>
+        words.some(w =>
+          m.title.toLowerCase().includes(w) ||
+          m.mood.some(t => t.includes(w)) ||
+          m.genres.some(g => g.toLowerCase().includes(w))
+        )
+      ).slice(0, 4);
+      return loose.length ? loose : ALL_MOVIES_VOICE.sort(() => Math.random() - 0.5).slice(0, 4);
+    }
+
+    return scored;
+  }
+
+  function generateReasoning(query, results) {
+    if (!results.length) return "Hmm, couldn't find a perfect match. Here are some picks you might enjoy!";
+    const q = query.toLowerCase();
+
+    if (q.includes('cry') || q.includes('sad') || q.includes('emotional'))
+      return `These films are known for their deeply emotional stories — have tissues ready! 🥺`;
+    if (q.includes('family') || q.includes('kids'))
+      return `Perfect picks for a cozy family movie night! 🍿`;
+    if (q.includes('scary') || q.includes('horror'))
+      return `These will keep you on the edge of your seat — watch with the lights on! 👁️`;
+    if (q.includes('funny') || q.includes('laugh') || q.includes('comedy'))
+      return `These are guaranteed to get you laughing! 😄`;
+    if (q.includes('mind') || q.includes('twist') || q.includes('psychological'))
+      return `Prepare to question reality — these films will blow your mind! 🧠`;
+    if (q.includes('action') || q.includes('adrenaline') || q.includes('intense'))
+      return `Buckle up — these are packed with non-stop action! 💥`;
+    if (q.includes('romantic') || q.includes('love') || q.includes('romance'))
+      return `Perfect for a romantic evening! ❤️`;
+    if (q.includes('inspir') || q.includes('hope') || q.includes('motivat'))
+      return `These stories will lift your spirits and leave you feeling inspired! ✨`;
+
+    const genres = [...new Set(results.flatMap(m => m.genres))].slice(0, 2).join(' & ');
+    return `Based on "${query}", here are ${results.length} great ${genres || 'movie'} picks for you!`;
+  }
+
+  // ---- Show results in modal ----
+  function showVoiceResults(results, reasoning) {
+    setMicState('idle');
+    document.getElementById('voiceThinking').style.display = 'none';
+    voiceResults = results;
+
+    if (!results.length) {
+      document.getElementById('voiceTitle').textContent = 'No matches found';
+      document.getElementById('voiceSubtitle').style.display = '';
+      document.getElementById('voiceSubtitle').textContent = 'Try saying something like "action movie" or "something funny".';
+      voiceStartBtn.style.display = 'flex';
+      voiceStartBtn.textContent = '🎤 Try Again';
+      return;
+    }
+
+    document.getElementById('voiceTitle').textContent = `Found ${results.length} match${results.length>1?'es':''}!`;
+    document.getElementById('voiceSubtitle').style.display = '';
+    document.getElementById('voiceSubtitle').textContent   = reasoning;
+    document.getElementById('voiceResultLabel').textContent = `Claude's picks for "${lastQuery}"`;
+    document.getElementById('voiceResults').style.display  = 'block';
+
+    // Show up to 4 poster cards
+    document.getElementById('voiceResultGrid').innerHTML = results.slice(0,4).map(m => `
+      <div onclick="window.location.href='movie.html?title=${encodeURIComponent(m.title)}'"
+        style="cursor:pointer;border-radius:8px;overflow:hidden;width:90px;
+        transition:transform .15s;flex-shrink:0;"
+        onmouseover="this.style.transform='scale(1.07)'"
+        onmouseout="this.style.transform='scale(1)'">
+        <img src="${m.poster}" alt="${m.title}"
+          style="width:90px;aspect-ratio:2/3;object-fit:cover;display:block;background:#222;border-radius:8px;"
+          onerror="this.style.background='#333'"/>
+        <div style="font-size:.62rem;color:#aaa;text-align:center;padding:4px 2px;line-height:1.2;">${m.title}</div>
+      </div>
+    `).join('');
+
+    voiceStartBtn.style.display = 'flex';
+    voiceStartBtn.textContent   = '🎤 Search Again';
+    voiceStartBtn.onclick       = () => { resetVoiceUI(); };
+
+    if (results.length > 4) {
+      voiceSeeAll.style.display = 'block';
+      voiceSeeAll.onclick = () => {
+        closeVoiceModal();
+        window.location.href = `search.html?q=${encodeURIComponent(lastQuery)}`;
+      };
+    }
+  }
+
+  function showVoiceError(msg) {
+    document.getElementById('voiceError').style.display = 'block';
+    document.getElementById('voiceError').textContent   = msg;
+    voiceStartBtn.style.display  = 'flex';
+    voiceStartBtn.textContent    = '🎤 Try Again';
+    voiceStartBtn.onclick        = startListening;
+  }
+
+  // ---- Keyboard shortcut: press V to open voice search ----
+  document.addEventListener('keydown', e => {
+    if (e.key === 'v' || e.key === 'V') {
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+      if (voiceModal.style.display === 'flex') closeVoiceModal();
+      else openVoiceModal();
+    }
+    if (e.key === 'Escape' && voiceModal.style.display === 'flex') closeVoiceModal();
+  });
+
+  // ============================================================
+  //  SURPRISE ME — pick a random movie and open its detail page
+  // ============================================================
+  document.getElementById('surpriseBtn').addEventListener('click', () => {
+    const movie = ALL_MOVIES_VOICE[Math.floor(Math.random() * ALL_MOVIES_VOICE.length)];
+    // Flash animation on button
+    const btn = document.getElementById('surpriseBtn');
+    btn.textContent = '🎬 ' + movie.title;
+    btn.style.background = 'rgba(229,9,20,.5)';
+    setTimeout(() => {
+      window.location.href = `movie.html?title=${encodeURIComponent(movie.title)}`;
+    }, 700);
+  });
+  </script>
 </body>
 </html>

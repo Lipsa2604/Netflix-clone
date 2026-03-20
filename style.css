@@ -168,3 +168,41 @@ body{
   .poster-wrap .poster { width: 120px; min-width: 120px; height: 180px; }
   .genre-tabs-wrap { padding: 0 4%; }
 }
+
+/* ---- ACTIVE PROFILE INDICATOR ---- */
+.profile-indicator {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 4px 12px 4px 6px;
+  font-size: 0.78rem; color: #ccc;
+  cursor: pointer; transition: background .15s;
+  text-decoration: none; flex-shrink: 0;
+}
+.profile-indicator:hover { background: rgba(255,255,255,0.13); color: #fff; }
+.profile-indicator .pi-dot {
+  width: 22px; height: 22px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.75rem; flex-shrink: 0;
+}
+
+/* ---- SKELETON LOADING ---- */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.05) 25%,
+    rgba(255,255,255,0.10) 50%,
+    rgba(255,255,255,0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 6px;
+  color: transparent !important;
+  pointer-events: none;
+  user-select: none;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

@@ -242,6 +242,7 @@
     </div>
   </div>
 
+<script src="profile-key.js"></script>
 <script>
 // ======== SESSION CHECK ========
 const session = JSON.parse(localStorage.getItem('nf_session') || sessionStorage.getItem('nf_session') || 'null');
@@ -281,7 +282,7 @@ const ALL_MOVIES = [
 ];
 
 // ======== MY LIST STORAGE ========
-const LIST_KEY = 'nf_mylist_' + session.email;
+const LIST_KEY = profileKey('nf_mylist');
 function getMyList()   { return JSON.parse(localStorage.getItem(LIST_KEY) || '[]'); }
 function saveMyList(l) { localStorage.setItem(LIST_KEY, JSON.stringify(l)); }
 function isInList(title) { return getMyList().some(m => m.title === title); }
@@ -447,5 +448,6 @@ document.getElementById('logoutBtn').addEventListener('click', e => {
 renderMyList();
 renderBrowse();
 </script>
+<script src="i18n.js"></script>
 </body>
 </html>

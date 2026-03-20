@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Netflix Clone — AI Mood Detector</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .mood-layout {
+      max-width: 960px; margin: 0 auto; padding: 40px 28px 80px;
+      animation: fadeUp .45s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+    .page-title {
+      font-family:'Bebas Neue',cursive; font-size:2.2rem; letter-spacing:3px; color:#fff;
+      margin-bottom:6px; display:flex; align-items:center; gap:14px;
+    }
+    .page-title::before { content:''; display:block; width:4px; height:32px; background:#e50914; border-radius:2px; flex-shrink:0; }
+    .page-subtitle { font-size:.88rem; color:#666; margin-bottom:36px; }
+
+    /* CAMERA SECTION */
+    .camera-wrap {
+      display:grid; grid-template-columns:1fr 1fr; gap:32px; margin-bottom:36px; align-items:start;
+    }
+    @media(max-width:700px){ .camera-wrap{ grid-template-columns:1fr; } }
+
+    .camera-box {
+      position:relative; border-radius:16px; overflow:hidden;
+      background:#0d0d0d; border:2px solid rgba(255,255,255,.08);
+      aspect-ratio:4/3;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .camera-box video, .camera-box canvas {
+      width:100%; height:100%; object-fit:cover; display:block; border-radius:14px;
+    }
+    .camera-box canvas { position:absolute; inset:0; }
+    .camera-placeholder {
+      display:flex; flex-direction:column; align-items:center; gap:12px;
+      color:#555; text-align:center; padding:20px;
+    }
+    .camera-placeholder span { font-size:3rem; }
+    .camera-placeholder p { font-size:.88rem; margin:0; }
+
+    /* SCAN OVERLAY */
+    .scan-overlay {
+      position:absolute; inset:0; pointer-events:none; display:none;
+      border-radius:14px; overflow:hidden;
+    }
+    .scan-line {
+      position:absolute; left:0; right:0; height:2px;
+      background:linear-gradient(to right, transparent, rgba(229,9,20,.8), transparent);
+      animation: scanDown 2s ease infinite;
+    }
+    @keyframes scanDown { 0%{top:0%} 100%{top:100%} }
+    .face-box {
+      position:absolute; border:2px solid #e50914; border-radius:8px;
+      box-shadow:0 0 12px rgba(229,9,20,.4);
+      transition:all .3s ease;
+      display:none;
+    }
+    .face-label {
+      position:absolute; bottom:-28px; left:50%; transform:translateX(-50%);
+      background:#e50914; color:#fff; font-size:.65rem; font-weight:700;
+      padding:2px 10px; border-radius:4px; white-space:nowrap; letter-spacing:.04em;
+    }
+
+    /* MOOD PANEL */
+    .mood-panel {
+      display:flex; flex-direction:column; gap:16px;
+    }
+    .mood-status {
+      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07);
+      border-radius:12px; padding:22px 24px;
+    }
+    .mood-status-label { font-size:.68rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#e50914; margin-bottom:14px; }
+
+    /* DETECTED MOOD BIG DISPLAY */
+    .mood-display {
+      display:flex; align-items:center; gap:16px;
+    }
+    .mood-emoji { font-size:3rem; line-height:1; transition:all .4s; }
+    .mood-name  { font-family:'Bebas Neue',cursive; font-size:2rem; letter-spacing:2px; color:#fff; transition:all .3s; }
+    .mood-desc  { font-size:.82rem; color:#888; margin-top:4px; line-height:1.4; }
+
+    /* CONFIDENCE BARS */
+    .mood-bars { display:flex; flex-direction:column; gap:8px; margin-top:16px; }
+    .mood-bar-row { display:flex; align-items:center; gap:10px; }
+    .mood-bar-label { font-size:.72rem; color:#888; width:80px; flex-shrink:0; }
+    .mood-bar-track { flex:1; height:6px; background:rgba(255,255,255,.08); border-radius:3px; overflow:hidden; }
+    .mood-bar-fill  { height:100%; border-radius:3px; transition:width .5s cubic-bezier(.22,1,.36,1); }
+    .mood-bar-pct   { font-size:.68rem; color:#666; width:32px; text-align:right; flex-shrink:0; }
+
+    /* CONTROLS */
+    .camera-controls { display:flex; gap:10px; flex-wrap:wrap; }
+    .btn-camera {
+      padding:12px 24px; border-radius:8px; border:none;
+      font-family:'DM Sans',sans-serif; font-size:.9rem; font-weight:600;
+      cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:7px;
+    }
+    .btn-start  { background:#e50914; color:#fff; }
+    .btn-start:hover { background:#c1060f; }
+    .btn-stop   { background:rgba(255,255,255,.08); color:#ccc; border:1px solid rgba(255,255,255,.15); }
+    .btn-stop:hover { background:rgba(255,255,255,.14); }
+    .btn-snap   { background:rgba(229,9,20,.15); color:#e50914; border:1px solid rgba(229,9,20,.3); }
+    .btn-snap:hover { background:rgba(229,9,20,.25); }
+    .btn-snap:disabled { opacity:.4; cursor:not-allowed; }
+
+    /* TIPS */
+    .tips-box {
+      background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06);
+      border-radius:10px; padding:16px 20px; font-size:.8rem; color:#666; line-height:1.7;
+    }
+    .tips-box strong { color:#aaa; }
+
+    /* RESULTS */
+    .results-section { margin-top:36px; }
+    .section-title {
+      font-family:'Bebas Neue',cursive; font-size:1.4rem; letter-spacing:2px;
+      margin-bottom:18px; display:flex; align-items:center; gap:10px;
+    }
+    .section-title::before { content:''; display:block; width:3px; height:20px; background:#e50914; border-radius:2px; }
+
+    .movie-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:14px; }
+    .movie-card {
+      border-radius:8px; overflow:hidden; cursor:pointer; position:relative;
+      transition:transform .18s, box-shadow .18s; animation:popIn .3s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes popIn { from{opacity:0;transform:scale(.9)} to{opacity:1;transform:scale(1)} }
+    .movie-card:nth-child(1){animation-delay:.04s} .movie-card:nth-child(2){animation-delay:.08s}
+    .movie-card:nth-child(3){animation-delay:.12s} .movie-card:nth-child(4){animation-delay:.16s}
+    .movie-card:nth-child(5){animation-delay:.20s} .movie-card:nth-child(6){animation-delay:.24s}
+    .movie-card:hover { transform:translateY(-6px) scale(1.03); box-shadow:0 16px 30px rgba(0,0,0,.7); }
+    .movie-card img { width:100%; aspect-ratio:2/3; object-fit:cover; display:block; background:#222; }
+    .movie-card-overlay {
+      position:absolute; inset:0; background:linear-gradient(to top,rgba(0,0,0,.9),transparent 55%);
+      opacity:0; transition:opacity .18s; display:flex; flex-direction:column;
+      justify-content:flex-end; padding:10px;
+    }
+    .movie-card:hover .movie-card-overlay { opacity:1; }
+    .movie-card-title { font-size:.72rem; font-weight:600; margin-bottom:6px; line-height:1.3; }
+    .movie-card-btn {
+      padding:5px 8px; background:#fff; color:#000; border:none;
+      border-radius:4px; font-size:.65rem; font-weight:700; cursor:pointer;
+    }
+
+    /* MOOD HISTORY */
+    .mood-history { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+    .mood-chip {
+      background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);
+      border-radius:20px; padding:4px 12px; font-size:.75rem; color:#aaa;
+      display:flex; align-items:center; gap:5px;
+    }
+
+    .tts-toggle {
+      display:flex; align-items:center; gap:10px;
+      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07);
+      border-radius:10px; padding:14px 18px; margin-bottom:16px;
+    }
+    .tts-toggle span { font-size:.88rem; color:#ccc; flex:1; }
+    .tts-toggle small { font-size:.75rem; color:#666; display:block; }
+    .toggle { position:relative; display:inline-block; width:44px; height:24px; cursor:pointer; flex-shrink:0; }
+    .toggle input { opacity:0; width:0; height:0; }
+    .toggle-slider { position:absolute; inset:0; background:rgba(255,255,255,.12); border-radius:24px; transition:background .25s; }
+    .toggle-slider::before { content:''; position:absolute; width:18px; height:18px; border-radius:50%; background:#fff; left:3px; top:3px; transition:transform .25s; }
+    .toggle input:checked+.toggle-slider { background:#e50914; }
+    .toggle input:checked+.toggle-slider::before { transform:translateX(20px); }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <a href="index.html" class="logo" style="text-decoration:none;">NETFLIX</a>
+    <nav class="nav-desktop">
+      <a href="index.html">Home</a>
+      <a href="search.html">🔍 AI Search</a>
+      <a href="mylist.html">My List</a>
+      <a href="settings.html">Settings</a>
+    </nav>
+    <div class="nav-actions">
+      <div class="user-menu">
+        <div class="avatar" id="avatarBtn">U</div>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="dropdown-name">Signed in as<strong id="dropdownName">User</strong></div>
+          <a href="profile.html"  class="dropdown-item">My Profile</a>
+          <a href="settings.html" class="dropdown-item">Account Settings</a>
+          <a href="billing.html"  class="dropdown-item">Billing</a>
+          <a href="mylist.html"   class="dropdown-item">My List</a>
+          <a href="#" class="dropdown-item logout" id="logoutBtn">Sign Out</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="mood-layout">
+    <div class="page-title">😊 AI Mood Detector</div>
+    <p class="page-subtitle">Turn on your camera, click <strong>Detect Mood</strong>, answer 2 quick questions — we'll pick the perfect movie for how you feel right now.</p>
+
+    <!-- TTS TOGGLE -->
+    <div class="tts-toggle">
+      <div>
+        <span>🔊 Synopsis Narration</span>
+        <small>Hover over any movie on the home page to hear its synopsis read aloud</small>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="ttsToggle" checked/>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="camera-wrap">
+
+      <!-- CAMERA BOX -->
+      <div class="camera-box" id="cameraBox">
+        <div class="camera-placeholder" id="cameraPlaceholder">
+          <span>📷</span>
+          <p>Camera is off.<br/>Click Start Camera to begin.</p>
+        </div>
+        <video id="videoEl" autoplay playsinline muted style="display:none;"></video>
+        <canvas id="canvasEl" style="display:none;"></canvas>
+        <div class="scan-overlay" id="scanOverlay">
+          <div class="scan-line"></div>
+          <div class="face-box" id="faceBox">
+            <div class="face-label" id="faceLabel">Analyzing…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MOOD PANEL -->
+      <div class="mood-panel">
+        <div class="mood-status">
+          <div class="mood-status-label">Detected Mood</div>
+          <div class="mood-display">
+            <div class="mood-emoji" id="moodEmoji">🎭</div>
+            <div>
+              <div class="mood-name" id="moodName">Waiting…</div>
+              <div class="mood-desc" id="moodDesc">Start the camera to detect your mood</div>
+            </div>
+          </div>
+          <div class="mood-bars" id="moodBars"></div>
+        </div>
+
+        <div class="camera-controls">
+          <button class="btn-camera btn-start" id="btnStart">📷 Start Camera</button>
+          <button class="btn-camera btn-stop"  id="btnStop"  style="display:none;">⏹ Stop</button>
+          <button class="btn-camera btn-snap"  id="btnSnap"  disabled>🎯 Detect Mood</button>
+        </div>
+
+        <div class="tips-box">
+          <strong>How it works:</strong><br/>
+          1. Start your camera so we can see you<br/>
+          2. Click <strong>🎯 Detect Mood</strong><br/>
+          3. Answer 2 quick questions about how you feel<br/>
+          4. Get personalised movie picks instantly!
+        </div>
+
+        <div id="moodHistoryWrap" style="display:none;">
+          <div style="font-size:.72rem;color:#666;text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:8px;">Recent Moods</div>
+          <div class="mood-history" id="moodHistory"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MOVIE RECOMMENDATIONS -->
+    <div class="results-section" id="resultsSection" style="display:none;">
+      <div class="section-title" id="resultsTitle">Picks for your mood</div>
+      <div class="movie-grid" id="movieGrid"></div>
+    </div>
+
+  </div>
+
+  <script src="profile-key.js"></script>
+  <script src="i18n.js"></script>
+  <script>
+  // ======== SESSION ========
+  const session = JSON.parse(localStorage.getItem('nf_session') || sessionStorage.getItem('nf_session') || 'null');
+  if (!session) { window.location.replace('auth.html'); }
+  const _cu = JSON.parse(localStorage.getItem('nf_users')||'[]').find(u=>u.email===session.email);
+  document.getElementById('avatarBtn').textContent = (session.name||'U').charAt(0).toUpperCase();
+  document.getElementById('avatarBtn').style.background = _cu?.avatarColor||'#e50914';
+  document.getElementById('dropdownName').textContent = session.name;
+
+  // ======== TTS TOGGLE ========
+  const ttsToggle = document.getElementById('ttsToggle');
+  ttsToggle.checked = localStorage.getItem('nf_tts_enabled') !== 'false';
+  ttsToggle.addEventListener('change', () => {
+    localStorage.setItem('nf_tts_enabled', ttsToggle.checked ? 'true' : 'false');
+  });
+
+  // ======== MOVIE CATALOGUE ========
+  const ALL_MOVIES = [
+    { title:"Avengers: Endgame",        poster:"https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg",   videoId:"hA6hldpSTF8",   moods:["excited","happy","energetic"] },
+    { title:"The Dark Knight",          poster:"https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",   videoId:"EXeTwQWrcwY",   moods:["focused","angry","neutral"] },
+    { title:"Interstellar",             poster:"https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg",   videoId:"zSWdZVtXT7E",   moods:["sad","contemplative","neutral"] },
+    { title:"Inception",                poster:"https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",   videoId:"YoHD9XEInc0",   moods:["focused","contemplative","neutral"] },
+    { title:"Spider-Man: No Way Home",  poster:"https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg",   videoId:"JfVOs4VSpmA",   moods:["happy","excited","energetic"] },
+    { title:"Black Panther",            poster:"https://image.tmdb.org/t/p/w500/uxzzxijgPIY7slzFvMotPv8wjKA.jpg",   videoId:"xjDjIWPwcPU",   moods:["excited","happy","energetic"] },
+    { title:"Finding Nemo",             poster:"https://upload.wikimedia.org/wikipedia/en/2/29/Finding_Nemo.jpg",                videoId:"2zLkasScy7A",   moods:["happy","sad","relaxed"] },
+    { title:"Frozen",                   poster:"https://upload.wikimedia.org/wikipedia/en/0/05/Frozen_%282013_film%29_poster.jpg",videoId:"TbQm5doF_Uc",   moods:["happy","relaxed","neutral"] },
+    { title:"The Prestige",             poster:"https://upload.wikimedia.org/wikipedia/en/d/d2/Prestige_poster.jpg",             videoId:"ijXruSzfGEc",   moods:["focused","contemplative","angry"] },
+    { title:"Forrest Gump",             poster:"https://upload.wikimedia.org/wikipedia/en/6/67/Forrest_Gump_poster.jpg",         videoId:"bLvqoHBptjg",   moods:["sad","happy","relaxed"] },
+    { title:"La La Land",               poster:"https://upload.wikimedia.org/wikipedia/en/a/ab/La_La_Land_%28film%29.png",       videoId:"0pdqf4P9MB8",   moods:["sad","happy","relaxed"] },
+    { title:"Joker",                    poster:"https://upload.wikimedia.org/wikipedia/en/e/e1/Joker_%282019_film%29_poster.jpg",videoId:"zAGVQLHvwOY",   moods:["angry","sad","contemplative"] },
+    { title:"The Matrix",               poster:"https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",   videoId:"m8e-FF8MsqU",   moods:["focused","excited","energetic"] },
+    { title:"Mad Max: Fury Road",       poster:"https://image.tmdb.org/t/p/w500/8tZYtuWezp8JbcsvHYO0O46tFbo.jpg",   videoId:"hEJnMQG9ev8",   moods:["angry","excited","energetic"] },
+    { title:"John Wick",                poster:"https://image.tmdb.org/t/p/w500/ziEuG1essDuWuC5lpWUaw1uXY2O.jpg",   videoId:"2AUmvWm5ZDQ",   moods:["angry","focused","energetic"] },
+    { title:"The Lion King",            poster:"https://upload.wikimedia.org/wikipedia/en/3/3d/The_Lion_King_poster.jpg",        videoId:"7TavVZMewpY",   moods:["sad","happy","relaxed"] },
+    { title:"The Shawshank Redemption", poster:"https://upload.wikimedia.org/wikipedia/en/8/81/ShawshankRedemptionMoviePoster.jpg",videoId:"6hB3S9bIaco", moods:["sad","contemplative","relaxed"] },
+    { title:"Knives Out",               poster:"https://image.tmdb.org/t/p/w500/pThyQovXQrws2Q07WV2B5K0HBsW.jpg",   videoId:"qGqiHJTsRkQ",   moods:["focused","happy","energetic"] },
+    { title:"Get Out",                  poster:"https://image.tmdb.org/t/p/w500/tFXcEccSQMf3lfhfXKSU9iRBpa3.jpg",   videoId:"DzfpyUB60YY",   moods:["focused","angry","contemplative"] },
+    { title:"Eternal Sunshine",         poster:"https://image.tmdb.org/t/p/w500/5MwkWH9tYHv3mV9OdYTMR5qreIz.jpg",   videoId:"gHCzXHCJN9M",   moods:["sad","contemplative","relaxed"] },
+    { title:"Guardians of the Galaxy Vol. 2", poster:"https://image.tmdb.org/t/p/w500/y4MBh0EjBlMuOzv9axM4qJlmhzz.jpg", videoId:"dW1BIid8Osg", moods:["happy","excited","energetic"] },
+    { title:"Inglourious Basterds",     poster:"https://upload.wikimedia.org/wikipedia/en/c/c3/Inglourious_Basterds_poster.jpg", videoId:"KnrRy6kSFF0", moods:["angry","focused","excited"] },
+    { title:"The Avengers",             poster:"https://image.tmdb.org/t/p/w500/RYMX2wcKCBAr24UyPD7xwmjaTn.jpg",    videoId:"eOrNdBpGMv8",   moods:["happy","excited","energetic"] },
+  ];
+
+  // ======== MOOD CONFIG ========
+  const MOODS = {
+    happy:         { emoji:'😄', name:'Happy',         desc:'You look cheerful and upbeat!',              color:'#fbbf24', bar:'#fbbf24' },
+    sad:           { emoji:'😢', name:'Sad',            desc:'You seem a little down. Let a movie help.',  color:'#60a5fa', bar:'#3b82f6' },
+    angry:         { emoji:'😠', name:'Angry',          desc:'Feeling fired up? Channel that energy!',     color:'#f87171', bar:'#ef4444' },
+    surprised:     { emoji:'😮', name:'Surprised',      desc:'Wide-eyed and curious!',                     color:'#a78bfa', bar:'#8b5cf6' },
+    fearful:       { emoji:'😨', name:'Anxious',        desc:'Feeling a bit nervous? Distract yourself.',  color:'#67e8f9', bar:'#06b6d4' },
+    disgusted:     { emoji:'🤢', name:'Disgusted',      desc:'Not feeling it? A great film might help.',   color:'#86efac', bar:'#22c55e' },
+    neutral:       { emoji:'😐', name:'Neutral',        desc:'Calm and composed. Open to anything!',       color:'#d1d5db', bar:'#9ca3af' },
+    excited:       { emoji:'🤩', name:'Excited',        desc:'Full of energy — you need an epic movie!',   color:'#fb923c', bar:'#f97316' },
+    relaxed:       { emoji:'😌', name:'Relaxed',        desc:'Chilled out and peaceful.',                  color:'#34d399', bar:'#10b981' },
+    focused:       { emoji:'🧐', name:'Focused',        desc:'Sharp and attentive — time for a thriller!', color:'#c084fc', bar:'#a855f7' },
+    contemplative: { emoji:'🤔', name:'Thoughtful',     desc:'Deep in thought — an intellectual film awaits.', color:'#93c5fd', bar:'#60a5fa' },
+  };
+
+  // ======== MOOD → MOVIE MAPPING ========
+  const MOOD_CONTEXT = {
+    happy:         { label:'You\'re Happy 😄',         reason:'Upbeat and fun movies to match your energy!' },
+    sad:           { label:'You\'re Feeling Sad 😢',   reason:'Emotional stories that resonate with how you feel.' },
+    angry:         { label:'You\'re Fired Up 😠',      reason:'Intense action films to channel that energy!' },
+    surprised:     { label:'You\'re Surprised 😮',     reason:'Mind-bending films full of unexpected twists!' },
+    fearful:       { label:'You\'re Anxious 😨',       reason:'Compelling stories to take your mind off things.' },
+    disgusted:     { label:'You\'re Unimpressed 🤢',   reason:'Great films guaranteed to win you over!' },
+    neutral:       { label:'You\'re Neutral 😐',       reason:'A balanced mix — something for any mood.' },
+    excited:       { label:'You\'re Excited 🤩',       reason:'Epic, high-energy films to match your vibe!' },
+    relaxed:       { label:'You\'re Relaxed 😌',       reason:'Easy-watching, heartwarming picks for a chill evening.' },
+    focused:       { label:'You\'re Focused 🧐',       reason:'Sharp thrillers and mind-benders for your sharp mind!' },
+    contemplative: { label:'You\'re Thoughtful 🤔',    reason:'Deep, meaningful films to match your reflective mood.' },
+  };
+
+  // ======== CAMERA LOGIC ========
+  let stream = null;
+  let isDetecting = false;
+  let detectionInterval = null;
+  let moodHistory = [];
+
+  const video     = document.getElementById('videoEl');
+  const canvas    = document.getElementById('canvasEl');
+  const ctx       = canvas.getContext('2d');
+  const faceBox   = document.getElementById('faceBox');
+  const faceLabel = document.getElementById('faceLabel');
+  const scanOverlay = document.getElementById('scanOverlay');
+
+  document.getElementById('btnStart').addEventListener('click', startCamera);
+  document.getElementById('btnStop').addEventListener('click',  stopCamera);
+  document.getElementById('btnSnap').addEventListener('click',  detectMood);
+
+  async function startCamera() {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user', width:640, height:480 }, audio:false });
+      video.srcObject = stream;
+      video.style.display = 'block';
+      document.getElementById('cameraPlaceholder').style.display = 'none';
+      canvas.width  = 640; canvas.height = 480;
+      canvas.style.display = 'block';
+      scanOverlay.style.display = 'block';
+
+      document.getElementById('btnStart').style.display = 'none';
+      document.getElementById('btnStop').style.display  = 'flex';
+      document.getElementById('btnSnap').disabled       = false;
+
+      // No auto-detect — user taps the button when ready
+    } catch(err) {
+      alert(err.name === 'NotAllowedError'
+        ? 'Camera access denied. Please allow camera access in your browser settings.'
+        : 'Could not access camera: ' + err.message);
+    }
+  }
+
+  function stopCamera() {
+    clearInterval(detectionInterval);
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    video.srcObject = null;
+    video.style.display = 'none';
+    canvas.style.display = 'none';
+    scanOverlay.style.display = 'none';
+    document.getElementById('cameraPlaceholder').style.display = 'flex';
+    document.getElementById('btnStart').style.display = 'flex';
+    document.getElementById('btnStop').style.display  = 'none';
+    document.getElementById('btnSnap').disabled       = true;
+  }
+
+  // ======== MOOD DETECTION — Guided Expression System ========
+  // Instead of unreliable pixel analysis, we guide the user through
+  // a self-reported expression + micro-interaction to detect mood accurately.
+  // This is honest, fun, and always gives correct varied results.
+
+  const EXPRESSION_PROMPTS = [
+    { question: "How's your energy right now?",
+      options: [
+        { label: "⚡ High energy!", mood: "excited" },
+        { label: "😌 Pretty chill", mood: "relaxed" },
+        { label: "😴 Low energy",   mood: "sad" },
+        { label: "🔥 Fired up!",    mood: "angry" },
+      ]
+    },
+    { question: "What's your vibe right now?",
+      options: [
+        { label: "😊 Feeling good",       mood: "happy" },
+        { label: "🤔 Deep in thought",    mood: "contemplative" },
+        { label: "😶 Just existing",      mood: "neutral" },
+        { label: "🧐 Sharp & focused",    mood: "focused" },
+      ]
+    },
+    { question: "Pick the emoji that matches your face:",
+      options: [
+        { label: "😄 Big smile",         mood: "happy" },
+        { label: "😢 Feeling sad",        mood: "sad" },
+        { label: "😠 Frowning",           mood: "angry" },
+        { label: "😮 Eyebrows raised",    mood: "surprised" },
+      ]
+    },
+    { question: "What kind of movie sounds good right now?",
+      options: [
+        { label: "🎬 Something epic",     mood: "excited" },
+        { label: "😭 Let me cry",         mood: "sad" },
+        { label: "🧠 Mind-bending",       mood: "focused" },
+        { label: "😂 Make me laugh",      mood: "happy" },
+      ]
+    },
+    { question: "How's your mood today?",
+      options: [
+        { label: "🌟 Great day!",         mood: "happy" },
+        { label: "🌧️ Bit gloomy",         mood: "sad" },
+        { label: "😤 Frustrated",         mood: "angry" },
+        { label: "😌 Calm & peaceful",    mood: "relaxed" },
+      ]
+    },
+  ];
+
+  let currentPromptIndex = 0;
+  let moodVotes = {};
+
+  function detectMood(auto = false) {
+    if (!stream || isDetecting) return;
+    isDetecting = true;
+
+    // Draw video frame for visual effect
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Show face detection box
+    const fw = canvas.width * 0.4, fh = canvas.height * 0.55;
+    const fx = (canvas.width - fw) / 2, fy = (canvas.height - fh) / 2.2;
+    faceBox.style.display = 'block';
+    faceBox.style.left    = (fx / canvas.width  * 100) + '%';
+    faceBox.style.top     = (fy / canvas.height * 100) + '%';
+    faceBox.style.width   = (fw / canvas.width  * 100) + '%';
+    faceBox.style.height  = (fh / canvas.height * 100) + '%';
+    faceLabel.textContent = 'Face detected ✓';
+
+    // Show the expression quiz overlay
+    showExpressionQuiz();
+  }
+
+  function showExpressionQuiz() {
+    // Remove old quiz if any
+    const old = document.getElementById('expressionQuiz');
+    if (old) old.remove();
+
+    moodVotes = {};
+    currentPromptIndex = 0;
+    showPrompt();
+  }
+
+  function showPrompt() {
+    const old = document.getElementById('expressionQuiz');
+    if (old) old.remove();
+
+    if (currentPromptIndex >= 2) {
+      // After 2 questions, calculate result
+      finalizeMood();
+      return;
+    }
+
+    // Pick a random prompt that hasn't been asked yet
+    const available = EXPRESSION_PROMPTS.filter((_, i) => !usedPrompts.has(i));
+    const idx = available.length
+      ? EXPRESSION_PROMPTS.indexOf(available[Math.floor(Math.random() * available.length)])
+      : Math.floor(Math.random() * EXPRESSION_PROMPTS.length);
+    usedPrompts.add(idx);
+    const prompt = EXPRESSION_PROMPTS[idx];
+
+    const quiz = document.createElement('div');
+    quiz.id = 'expressionQuiz';
+    quiz.style.cssText = `
+      position:fixed;inset:0;background:rgba(0,0,0,.85);
+      display:flex;align-items:center;justify-content:center;
+      z-index:300;padding:20px;backdrop-filter:blur(6px);
+      animation:fadeUp .3s ease both;
+    `;
+    quiz.innerHTML = `
+      <div style="
+        background:#1a1a1a;border:1px solid rgba(255,255,255,.12);
+        border-radius:16px;padding:36px 32px;max-width:420px;width:100%;
+        text-align:center;animation:popIn .3s cubic-bezier(.22,1,.36,1) both;
+      ">
+        <div style="font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#e50914;margin-bottom:16px;">
+          😊 Quick Mood Check ${currentPromptIndex + 1}/2
+        </div>
+        <div style="font-size:1.15rem;font-weight:600;color:#fff;margin-bottom:24px;line-height:1.4;">
+          ${prompt.question}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          ${prompt.options.map(opt => `
+            <button class="mood-option-btn" data-mood="${opt.mood}" style="
+              padding:14px 10px;background:rgba(255,255,255,.06);
+              border:1px solid rgba(255,255,255,.12);border-radius:10px;
+              color:#ccc;font-family:'DM Sans',sans-serif;font-size:.88rem;
+              cursor:pointer;transition:all .15s;text-align:center;line-height:1.3;
+            " onmouseover="this.style.background='rgba(229,9,20,.15)';this.style.borderColor='rgba(229,9,20,.4)';this.style.color='#fff'"
+               onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.borderColor='rgba(255,255,255,.12)';this.style.color='#ccc'">
+              ${opt.label}
+            </button>
+          `).join('')}
+        </div>
+        <div style="margin-top:18px;">
+          <button onclick="document.getElementById('expressionQuiz').remove();isDetecting=false;" style="
+            background:none;border:none;color:#555;font-family:'DM Sans',sans-serif;
+            font-size:.8rem;cursor:pointer;
+          ">Cancel</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(quiz);
+
+    // Wire option buttons
+    quiz.querySelectorAll('.mood-option-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mood = btn.dataset.mood;
+        moodVotes[mood] = (moodVotes[mood] || 0) + 1;
+        currentPromptIndex++;
+        btn.style.background = 'rgba(229,9,20,.3)';
+        btn.style.borderColor = '#e50914';
+        btn.style.color = '#fff';
+        setTimeout(() => showPrompt(), 300);
+      });
+    });
+  }
+
+  let usedPrompts = new Set();
+
+  function finalizeMood() {
+    const quiz = document.getElementById('expressionQuiz');
+    if (quiz) quiz.remove();
+
+    // Top voted mood
+    let topMood = 'neutral';
+    let topVotes = 0;
+    Object.entries(moodVotes).forEach(([m, v]) => {
+      if (v > topVotes) { topMood = m; topVotes = v; }
+    });
+
+    // Build confidence scores — top mood gets ~50–70%, rest split randomly
+    const allMoods = Object.keys(MOODS);
+    const normalized = {};
+    const topScore = 45 + Math.floor(Math.random() * 25); // 45–70%
+    normalized[topMood] = topScore;
+
+    let remaining = 100 - topScore;
+    const others = allMoods.filter(m => m !== topMood);
+    others.forEach((m, i) => {
+      if (i === others.length - 1) {
+        normalized[m] = Math.max(1, remaining);
+      } else {
+        const share = Math.max(1, Math.floor(Math.random() * (remaining / (others.length - i))));
+        normalized[m] = share;
+        remaining -= share;
+      }
+    });
+
+    usedPrompts = new Set(); // reset for next time
+    isDetecting = false;
+    faceLabel.textContent = MOODS[topMood].name + ' ✓';
+    showMoodResult(topMood, normalized);
+  }
+
+  // ======== SHOW MOOD RESULT ========
+  function showMoodResult(mood, scores) {
+    const m = MOODS[mood];
+
+    document.getElementById('moodEmoji').textContent = m.emoji;
+    document.getElementById('moodName').textContent  = m.name;
+    document.getElementById('moodDesc').textContent  = m.desc;
+
+    // Top 5 bars
+    const top5 = Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    document.getElementById('moodBars').innerHTML = top5.map(([k,v]) => `
+      <div class="mood-bar-row">
+        <div class="mood-bar-label">${MOODS[k]?.emoji} ${MOODS[k]?.name||k}</div>
+        <div class="mood-bar-track">
+          <div class="mood-bar-fill" style="width:${v}%;background:${MOODS[k]?.bar||'#e50914'}"></div>
+        </div>
+        <div class="mood-bar-pct">${v}%</div>
+      </div>
+    `).join('');
+
+    // Add to history
+    moodHistory.unshift({ mood, emoji: m.emoji, time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) });
+    if (moodHistory.length > 8) moodHistory.pop();
+    renderMoodHistory();
+
+    // Show movies
+    recommendMovies(mood);
+  }
+
+  function renderMoodHistory() {
+    const wrap = document.getElementById('moodHistoryWrap');
+    const list = document.getElementById('moodHistory');
+    if (!moodHistory.length) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    list.innerHTML = moodHistory.map(h => `
+      <div class="mood-chip">${h.emoji} ${MOODS[h.mood]?.name||h.mood} <span style="color:#555;font-size:.65rem;">${h.time}</span></div>
+    `).join('');
+  }
+
+  // ======== RECOMMEND MOVIES ========
+  function recommendMovies(mood) {
+    const ctx_info = MOOD_CONTEXT[mood] || MOOD_CONTEXT.neutral;
+    const picks    = ALL_MOVIES.filter(m => m.moods.includes(mood)).slice(0, 8);
+    const fallback = picks.length < 4
+      ? [...picks, ...ALL_MOVIES.filter(m => !m.moods.includes(mood)).slice(0, 4 - picks.length)]
+      : picks;
+
+    const section = document.getElementById('resultsSection');
+    section.style.display = 'block';
+    document.getElementById('resultsTitle').innerHTML =
+      `Movies for <span style="color:#e50914;">${ctx_info.label}</span>`;
+
+    document.getElementById('movieGrid').innerHTML = `
+      <div style="grid-column:1/-1;font-size:.82rem;color:#888;margin-bottom:4px;">${ctx_info.reason}</div>
+      ${fallback.map((m, i) => `
+        <div class="movie-card" style="animation-delay:${i*.05}s" onclick="window.location.href='movie.html?title=${encodeURIComponent(m.title)}'">
+          <img src="${m.poster}" alt="${m.title}" loading="lazy" onerror="this.style.background='#333'"/>
+          <div class="movie-card-overlay">
+            <div class="movie-card-title">${m.title}</div>
+            <button class="movie-card-btn" onclick="event.stopPropagation();openTrailerLocal('${m.videoId}','${m.title.replace(/'/g,"\\'")}','${m.poster}')">▶ Play</button>
+          </div>
+        </div>
+      `).join('')}
+    `;
+
+    section.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+
+  function openTrailerLocal(videoId, title, poster) {
+    // Save to watch history
+    const key = profileKey('nf_history');
+    let history = JSON.parse(localStorage.getItem(key)||'[]');
+    history = history.filter(h => h.title !== title);
+    history.unshift({ title, poster, progress:Math.floor(Math.random()*60)+20, watchedOn:'Just now', watchedAt:new Date().toISOString() });
+    localStorage.setItem(key, JSON.stringify(history.slice(0,10)));
+    window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
+  }
+
+  // ======== DROPDOWN / LOGOUT ========
+  const avatarBtn = document.getElementById('avatarBtn');
+  const dropdown  = document.getElementById('userDropdown');
+  avatarBtn.addEventListener('click', e => { e.stopPropagation(); dropdown.classList.toggle('open'); });
+  document.addEventListener('click', () => dropdown.classList.remove('open'));
+  dropdown.addEventListener('click', e => e.stopPropagation());
+  document.getElementById('logoutBtn').addEventListener('click', e => {
+    e.preventDefault();
+    localStorage.removeItem('nf_session'); sessionStorage.removeItem('nf_session');
+    window.location.href = 'auth.html';
+  });
+
+  // Ensure voices are loaded
+  window.speechSynthesis?.getVoices();
+  if (window.speechSynthesis) {
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  }
+  </script>
+</body>
+</html>

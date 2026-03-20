@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Netflix Clone — AI Search</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .search-layout { max-width:1100px; margin:0 auto; padding:40px 28px 80px; }
+
+    /* ---- SEARCH BAR ---- */
+    .ai-search-wrap {
+      position: relative; margin-bottom: 12px;
+    }
+    .ai-search-icon {
+      position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+      font-size: 1.2rem; pointer-events: none; color: #666;
+    }
+    .ai-search-input {
+      width: 100%; padding: 18px 56px 18px 52px;
+      background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+      border-radius: 12px; color: #fff;
+      font-family: 'DM Sans', sans-serif; font-size: 1.05rem; outline: none;
+      transition: border-color .2s, background .2s, box-shadow .2s;
+    }
+    .ai-search-input:focus {
+      border-color: rgba(229,9,20,.5); background: rgba(255,255,255,.1);
+      box-shadow: 0 0 0 3px rgba(229,9,20,.1);
+    }
+    .ai-search-input::placeholder { color: #555; }
+    .ai-clear-btn {
+      position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: #666; font-size: 1.1rem; cursor: pointer;
+      transition: color .15s; padding: 4px;
+    }
+    .ai-clear-btn:hover { color: #fff; }
+
+    /* HINT BAR */
+    .search-hint { font-size: .78rem; color: #555; margin-bottom: 28px; display: flex; align-items: center; gap: 6px; }
+    .ai-badge { background: linear-gradient(135deg,#e50914,#ff6b35); color: #fff; border-radius: 4px; padding: 2px 8px; font-size: .65rem; font-weight: 700; letter-spacing: .06em; }
+
+    /* FILTER CHIPS */
+    .filter-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+    .filter-chip {
+      padding: 6px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,.15);
+      background: transparent; color: #aaa; font-family: 'DM Sans', sans-serif;
+      font-size: .8rem; cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .filter-chip:hover  { border-color: rgba(255,255,255,.4); color: #fff; background: rgba(255,255,255,.05); }
+    .filter-chip.active { background: #e50914; border-color: #e50914; color: #fff; }
+
+    /* AI THINKING STATE */
+    .ai-thinking {
+      display: none; align-items: center; gap: 12px;
+      padding: 20px 24px; background: rgba(229,9,20,.06);
+      border: 1px solid rgba(229,9,20,.2); border-radius: 10px; margin-bottom: 24px;
+    }
+    .ai-thinking.show { display: flex; animation: fadeIn .3s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+    .ai-dots { display: flex; gap: 5px; }
+    .ai-dot  { width: 8px; height: 8px; border-radius: 50%; background: #e50914; animation: pulse 1.2s ease infinite; }
+    .ai-dot:nth-child(2) { animation-delay: .2s; }
+    .ai-dot:nth-child(3) { animation-delay: .4s; }
+    @keyframes pulse { 0%,100%{opacity:.3;transform:scale(.8)} 50%{opacity:1;transform:scale(1)} }
+    .ai-thinking-text { font-size: .9rem; color: #e50914; font-weight: 500; }
+
+    /* AI REASONING BOX */
+    .ai-reasoning {
+      display: none; padding: 16px 20px;
+      background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07);
+      border-radius: 10px; margin-bottom: 24px;
+      font-size: .84rem; color: #aaa; line-height: 1.6;
+    }
+    .ai-reasoning.show { display: block; animation: fadeIn .3s ease; }
+    .ai-reasoning strong { color: #e50914; }
+
+    /* RESULTS SECTION TITLE */
+    .results-title {
+      font-family: 'Bebas Neue', cursive; font-size: 1.3rem; letter-spacing: 2px;
+      margin-bottom: 18px; color: #fff; display: flex; align-items: center; gap: 10px;
+    }
+    .results-title::before { content:''; display:block; width:3px; height:20px; background:#e50914; border-radius:2px; }
+    .results-count { font-family: 'DM Sans', sans-serif; font-size: .78rem; color: #666; font-weight: 400; letter-spacing: 0; }
+
+    /* RESULTS GRID */
+    .results-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px;
+    }
+    .result-card {
+      border-radius: 8px; overflow: hidden; cursor: pointer; position: relative;
+      transition: transform .18s, box-shadow .18s;
+      animation: popIn .3s cubic-bezier(.22,1,.36,1) both;
+    }
+    .result-card:nth-child(1){animation-delay:.03s} .result-card:nth-child(2){animation-delay:.06s}
+    .result-card:nth-child(3){animation-delay:.09s} .result-card:nth-child(4){animation-delay:.12s}
+    .result-card:nth-child(5){animation-delay:.15s} .result-card:nth-child(6){animation-delay:.18s}
+    @keyframes popIn { from{opacity:0;transform:scale(.9)} to{opacity:1;transform:scale(1)} }
+    .result-card:hover { transform: translateY(-6px) scale(1.03); box-shadow: 0 18px 30px rgba(0,0,0,.7); }
+    .result-card img { width:100%; aspect-ratio:2/3; object-fit:cover; display:block; background:#222; }
+    .result-card-overlay {
+      position: absolute; inset:0;
+      background: linear-gradient(to top, rgba(0,0,0,.92) 0%, transparent 55%);
+      opacity: 0; transition: opacity .18s;
+      display: flex; flex-direction: column; justify-content: flex-end; padding: 10px;
+    }
+    .result-card:hover .result-card-overlay { opacity: 1; }
+    .result-card-title { font-size: .75rem; font-weight: 600; margin-bottom: 6px; line-height: 1.3; }
+    .result-card-actions { display: flex; gap: 5px; }
+    .rc-btn {
+      flex: 1; padding: 5px 4px; border: none; border-radius: 4px;
+      font-family: 'DM Sans', sans-serif; font-size: .65rem; font-weight: 700; cursor: pointer;
+      transition: opacity .15s;
+    }
+    .rc-btn:hover { opacity: .85; }
+    .rc-play { background: #fff; color: #000; }
+    .rc-info { background: rgba(255,255,255,.2); color: #fff; }
+
+    /* AI MATCH BADGE */
+    .ai-match-badge {
+      position: absolute; top: 6px; left: 6px;
+      background: linear-gradient(135deg,#e50914,#ff6b35);
+      color: #fff; border-radius: 4px; padding: 2px 7px;
+      font-size: .6rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+      z-index: 2;
+    }
+
+    /* QUICK SUGGESTIONS */
+    .suggestions-wrap { margin-bottom: 36px; }
+    .suggestions-label { font-size: .72rem; color: #666; text-transform: uppercase; letter-spacing: .1em; font-weight: 600; margin-bottom: 12px; }
+    .suggestion-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+    .suggestion-pill {
+      padding: 8px 16px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 20px; font-size: .82rem; color: #ccc; cursor: pointer;
+      transition: all .15s; display: flex; align-items: center; gap: 6px;
+    }
+    .suggestion-pill:hover { background: rgba(229,9,20,.1); border-color: rgba(229,9,20,.3); color: #fff; }
+
+    /* EMPTY / ERROR STATE */
+    .empty-state { text-align: center; padding: 60px 20px; color: #555; }
+    .empty-state .icon { font-size: 3rem; display: block; margin-bottom: 14px; }
+    .empty-state h3 { color: #888; font-size: 1.1rem; margin-bottom: 6px; font-weight: 500; }
+
+    @media(max-width:600px){ .results-grid{ grid-template-columns:repeat(3,1fr); gap:10px; } }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <a href="index.html" class="logo" style="text-decoration:none;">NETFLIX</a>
+    <nav class="nav-desktop">
+      <a href="index.html">Home</a>
+      <a href="mylist.html">My List</a>
+      <a href="profile.html">Profile</a>
+      <a href="settings.html">Settings</a>
+    </nav>
+    <div class="nav-actions">
+      <div class="user-menu">
+        <div class="avatar" id="avatarBtn">U</div>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="dropdown-name">Signed in as<strong id="dropdownName">User</strong></div>
+          <a href="profile.html"  class="dropdown-item">My Profile</a>
+          <a href="settings.html" class="dropdown-item">Account Settings</a>
+          <a href="billing.html"  class="dropdown-item">Billing</a>
+          <a href="mylist.html"   class="dropdown-item">My List</a>
+          <a href="#" class="dropdown-item logout" id="logoutBtn">Sign Out</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="search-layout">
+
+    <!-- AI SEARCH BAR -->
+    <div style="margin-bottom:8px;display:flex;align-items:center;gap:10px;">
+      <span style="font-family:'Bebas Neue',cursive;font-size:2rem;letter-spacing:3px;">Search</span>
+      <span class="ai-badge">AI Powered</span>
+    </div>
+
+    <div class="ai-search-wrap" style="display:flex;gap:10px;align-items:center;">
+      <div style="position:relative;flex:1;">
+        <span class="ai-search-icon">🔍</span>
+        <input class="ai-search-input" id="aiSearchInput"
+          placeholder="Try: 'mind-bending movies', 'something to watch with family', 'sad but beautiful'…"/>
+        <button class="ai-clear-btn hidden" id="clearBtn">✕</button>
+      </div>
+      <button id="voiceBtnSearch" title="Voice Search (press V)" style="
+        flex-shrink:0;padding:16px 18px;
+        background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+        color:#fff;border-radius:12px;cursor:pointer;font-size:1.1rem;
+        transition:all .2s;white-space:nowrap;
+      " title="Voice Search">🎤</button>
+    </div>
+    <div class="search-hint">
+      <span class="ai-badge">AI</span>
+      Describe what you're in the mood for in plain English — Claude will find the best matches.
+    </div>
+
+    <!-- FILTER CHIPS -->
+    <div class="filter-row" id="filterRow">
+      <button class="filter-chip active" data-filter="all">All</button>
+      <button class="filter-chip" data-filter="Action">Action</button>
+      <button class="filter-chip" data-filter="Drama">Drama</button>
+      <button class="filter-chip" data-filter="Thriller">Thriller</button>
+      <button class="filter-chip" data-filter="Sci-Fi">Sci-Fi</button>
+      <button class="filter-chip" data-filter="Animation">Animation</button>
+      <button class="filter-chip" data-filter="Romance">Romance</button>
+      <button class="filter-chip" data-filter="Comedy">Comedy</button>
+      <button class="filter-chip" data-filter="Horror">Horror</button>
+      <button class="filter-chip" data-filter="Kids">Kids</button>
+    </div>
+
+    <!-- AI THINKING INDICATOR -->
+    <div class="ai-thinking" id="aiThinking">
+      <div class="ai-dots">
+        <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
+      </div>
+      <span class="ai-thinking-text" id="aiThinkingText">Claude is analyzing your request…</span>
+    </div>
+
+    <!-- AI REASONING -->
+    <div class="ai-reasoning" id="aiReasoning"></div>
+
+    <!-- QUICK SUGGESTIONS (shown when no query) -->
+    <div class="suggestions-wrap" id="suggestionsWrap">
+      <div class="suggestions-label">Try asking…</div>
+      <div class="suggestion-pills">
+        <span class="suggestion-pill" data-query="mind-bending psychological movies">🧠 Mind-bending &amp; psychological</span>
+        <span class="suggestion-pill" data-query="something to watch with family and kids">👨‍👩‍👧 Good for the whole family</span>
+        <span class="suggestion-pill" data-query="movies that will make me cry">😢 Movies that make you cry</span>
+        <span class="suggestion-pill" data-query="action packed adrenaline movies">💥 Action &amp; adrenaline</span>
+        <span class="suggestion-pill" data-query="romantic feel good movies">❤️ Feel-good romance</span>
+        <span class="suggestion-pill" data-query="dark gritty crime thriller">🔪 Dark &amp; gritty thrillers</span>
+        <span class="suggestion-pill" data-query="animated beautiful visuals">🎨 Visually stunning animated</span>
+        <span class="suggestion-pill" data-query="movies about redemption and hope">🌟 Redemption &amp; hope</span>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="resultsSection" style="display:none;">
+      <div class="results-title">
+        Results <span class="results-count" id="resultsCount"></span>
+      </div>
+      <div class="results-grid" id="resultsGrid"></div>
+    </div>
+
+    <!-- EMPTY STATE -->
+    <div class="empty-state hidden" id="emptyState">
+      <span class="icon">🎬</span>
+      <h3 id="emptyTitle">No matches found</h3>
+      <p id="emptyMsg">Try a different description or browse by genre above.</p>
+    </div>
+
+  </div><!-- /search-layout -->
+
+  <!-- TRAILER MODAL -->
+  <div id="trailerModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-panel">
+      <button id="closeModal" class="modal-close">✕</button>
+      <div class="video-wrap">
+        <iframe id="trailerFrame" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script src="profile-key.js"></script>
+  <script src="i18n.js"></script>
+  <script>
+  // ======== SESSION ========
+  const session = JSON.parse(localStorage.getItem('nf_session') || sessionStorage.getItem('nf_session') || 'null');
+  if (!session) { window.location.replace('auth.html'); }
+  const _cu = JSON.parse(localStorage.getItem('nf_users')||'[]').find(u=>u.email===session.email);
+  document.getElementById('avatarBtn').textContent = (session.name||'U').charAt(0).toUpperCase();
+  document.getElementById('avatarBtn').style.background = _cu?.avatarColor||'#e50914';
+  document.getElementById('dropdownName').textContent = session.name;
+
+  // ======== MOVIE CATALOGUE ========
+  const ALL_MOVIES = [
+    { title:"Avengers: Endgame",        poster:"https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg",   videoId:"hA6hldpSTF8",   genres:["Action","Sci-Fi"],     mood:["epic","superhero","adventure","exciting"] },
+    { title:"The Dark Knight",          poster:"https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",   videoId:"EXeTwQWrcwY",   genres:["Action","Thriller"],   mood:["dark","intense","crime","psychological","gritty"] },
+    { title:"Interstellar",             poster:"https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg",   videoId:"zSWdZVtXT7E",   genres:["Sci-Fi","Drama"],      mood:["emotional","thought-provoking","space","beautiful","mind-bending"] },
+    { title:"Inception",                poster:"https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",   videoId:"YoHD9XEInc0",   genres:["Thriller","Sci-Fi"],   mood:["mind-bending","psychological","complex","thrilling"] },
+    { title:"Spider-Man: No Way Home",  poster:"https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg",   videoId:"JfVOs4VSpmA",   genres:["Action","Sci-Fi"],     mood:["fun","superhero","exciting","family-friendly","adventure"] },
+    { title:"Black Panther",            poster:"https://image.tmdb.org/t/p/w500/uxzzxijgPIY7slzFvMotPv8wjKA.jpg",   videoId:"xjDjIWPwcPU",   genres:["Action"],              mood:["epic","superhero","cultural","exciting"] },
+    { title:"The Matrix",               poster:"https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",   videoId:"m8e-FF8MsqU",   genres:["Action","Sci-Fi"],     mood:["mind-bending","philosophical","cool","revolutionary"] },
+    { title:"Joker",                    poster:"https://upload.wikimedia.org/wikipedia/en/e/e1/Joker_%282019_film%29_poster.jpg", videoId:"zAGVQLHvwOY", genres:["Thriller","Drama"], mood:["dark","disturbing","psychological","intense","sad"] },
+    { title:"Forrest Gump",             poster:"https://upload.wikimedia.org/wikipedia/en/6/67/Forrest_Gump_poster.jpg",         videoId:"bLvqoHBptjg", genres:["Drama"],            mood:["emotional","feel-good","touching","inspiring","heartwarming","cry"] },
+    { title:"La La Land",               poster:"https://upload.wikimedia.org/wikipedia/en/a/ab/La_La_Land_%28film%29.png",       videoId:"0pdqf4P9MB8", genres:["Romance","Drama"],  mood:["romantic","beautiful","dreamy","emotional","cry","musical"] },
+    { title:"The Prestige",             poster:"https://upload.wikimedia.org/wikipedia/en/d/d2/Prestige_poster.jpg",             videoId:"ijXruSzfGEc", genres:["Thriller","Drama"], mood:["mind-bending","psychological","mystery","twist"] },
+    { title:"The Shawshank Redemption", poster:"https://upload.wikimedia.org/wikipedia/en/8/81/ShawshankRedemptionMoviePoster.jpg",videoId:"6hB3S9bIaco",genres:["Drama"],           mood:["inspiring","emotional","hope","redemption","moving","cry"] },
+    { title:"Finding Nemo",             poster:"https://upload.wikimedia.org/wikipedia/en/2/29/Finding_Nemo.jpg",                videoId:"2zLkasScy7A", genres:["Animation","Kids"], mood:["family-friendly","fun","kids","heartwarming","adventure","animated"] },
+    { title:"Frozen",                   poster:"https://upload.wikimedia.org/wikipedia/en/0/05/Frozen_%282013_film%29_poster.jpg",videoId:"TbQm5doF_Uc",genres:["Animation","Kids"], mood:["family-friendly","kids","musical","fun","animated","heartwarming"] },
+    { title:"The Lion King",            poster:"https://upload.wikimedia.org/wikipedia/en/3/3d/The_Lion_King_poster.jpg",        videoId:"7TavVZMewpY", genres:["Animation","Kids"], mood:["emotional","family-friendly","kids","classic","animated","cry"] },
+    { title:"Mad Max: Fury Road",       poster:"https://image.tmdb.org/t/p/w500/8tZYtuWezp8JbcsvHYO0O46tFbo.jpg",   videoId:"hEJnMQG9ev8",   genres:["Action"],              mood:["adrenaline","intense","exciting","action-packed","wild"] },
+    { title:"John Wick",                poster:"https://image.tmdb.org/t/p/w500/ziEuG1essDuWuC5lpWUaw1uXY2O.jpg",   videoId:"2AUmvWm5ZDQ",   genres:["Action","Thriller"],   mood:["action-packed","intense","cool","adrenaline"] },
+    { title:"Inglourious Basterds",     poster:"https://upload.wikimedia.org/wikipedia/en/c/c3/Inglourious_Basterds_poster.jpg", videoId:"KnrRy6kSFF0",genres:["Action","Drama"],  mood:["dark","intense","gritty","war","suspense"] },
+    { title:"The Avengers",             poster:"https://image.tmdb.org/t/p/w500/RYMX2wcKCBAr24UyPD7xwmjaTn.jpg",    videoId:"eOrNdBpGMv8",   genres:["Action","Sci-Fi"],     mood:["fun","superhero","exciting","epic","adventure"] },
+    { title:"Get Out",                  poster:"https://image.tmdb.org/t/p/w500/tFXcEccSQMf3lfhfXKSU9iRBpa3.jpg",   videoId:"DzfpyUB60YY",   genres:["Thriller","Horror"],   mood:["disturbing","psychological","scary","dark","social"] },
+    { title:"Knives Out",               poster:"https://image.tmdb.org/t/p/w500/pThyQovXQrws2Q07WV2B5K0HBsW.jpg",   videoId:"qGqiHJTsRkQ",   genres:["Thriller","Comedy"],   mood:["fun","mystery","witty","clever","entertaining"] },
+    { title:"Eternal Sunshine",         poster:"https://image.tmdb.org/t/p/w500/5MwkWH9tYHv3mV9OdYTMR5qreIz.jpg",   videoId:"gHCzXHCJN9M",   genres:["Romance","Drama"],     mood:["emotional","romantic","sad","beautiful","thought-provoking","cry"] },
+    { title:"Guardians of the Galaxy Vol. 2", poster:"https://image.tmdb.org/t/p/w500/y4MBh0EjBlMuOzv9axM4qJlmhzz.jpg",videoId:"dW1BIid8Osg",genres:["Action","Sci-Fi"],    mood:["fun","funny","superhero","adventure","exciting"] },
+    { title:"Doctor Strange in the Multiverse of Madness", poster:"https://image.tmdb.org/t/p/w500/9Gtg2DzBhmYamXBS1hKAhiwbBKS.jpg",videoId:"aWzlQ2N6qqg",genres:["Action","Sci-Fi"],mood:["scary","dark","superhero","exciting","horror"] },
+  ];
+
+  // ======== STATE ========
+  let activeFilter = 'all';
+  let currentResults = [];
+  let searchTimer = null;
+
+  // ======== FILTER CHIPS ========
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      activeFilter = chip.dataset.filter;
+      const q = document.getElementById('aiSearchInput').value.trim();
+      if (q) runSearch(q);
+      else renderGenreFilter();
+    });
+  });
+
+  // ======== SEARCH INPUT ========
+  const input = document.getElementById('aiSearchInput');
+  const clearBtn = document.getElementById('clearBtn');
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim();
+    clearBtn.classList.toggle('hidden', !q);
+    clearTimeout(searchTimer);
+    if (!q) { resetToSuggestions(); return; }
+    searchTimer = setTimeout(() => runSearch(q), 600);
+  });
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { clearTimeout(searchTimer); runSearch(input.value.trim()); }
+  });
+
+  clearBtn.addEventListener('click', () => {
+    input.value = ''; clearBtn.classList.add('hidden');
+    resetToSuggestions();
+  });
+
+  // Quick suggestion pills
+  document.querySelectorAll('.suggestion-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      input.value = pill.dataset.query;
+      clearBtn.classList.remove('hidden');
+      runSearch(pill.dataset.query);
+    });
+  });
+
+  // ======== RESET TO SUGGESTIONS ========
+  function resetToSuggestions() {
+    document.getElementById('suggestionsWrap').style.display = '';
+    document.getElementById('resultsSection').style.display = 'none';
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('aiReasoning').classList.remove('show');
+    document.getElementById('aiThinking').classList.remove('show');
+  }
+
+  // ======== GENRE FILTER (no AI query) ========
+  function renderGenreFilter() {
+    const filtered = activeFilter === 'all'
+      ? ALL_MOVIES
+      : ALL_MOVIES.filter(m => m.genres.includes(activeFilter));
+    showResults(filtered, `${filtered.length} titles in ${activeFilter === 'all' ? 'all genres' : activeFilter}`, null, false);
+  }
+
+  // ======== SMART LOCAL NLP MATCHER ========
+  const INTENT_MAP = [
+    { keys:['cry','sad','emotional','tears','moving','heartbreak','sob','weep'],           tags:['cry','emotional','moving','sad'] },
+    { keys:['happy','feel good','feelgood','cheerful','uplifting','upbeat','heartwarming'],tags:['heartwarming','fun','inspiring','family-friendly'] },
+    { keys:['scary','horror','terrify','terrifying','frightening','dark','creep','creepy'],tags:['scary','dark','disturbing','horror'] },
+    { keys:['funny','comedy','laugh','hilarious','humor','humour','witty','lighthearted'], tags:['fun','funny','witty','clever','entertaining'] },
+    { keys:['romantic','romance','love','date night','couple','relationship'],             tags:['romantic','beautiful','dreamy','emotional'] },
+    { keys:['adrenaline','thrilling','intense','edge of seat','heart pumping','hyped'],    tags:['adrenaline','intense','action-packed','exciting'] },
+    { keys:['mind bending','mind-bending','mindbending','twist','confusing','complex','brain','puzzle','psychological'],tags:['mind-bending','psychological','twist','complex'] },
+    { keys:['inspiring','inspirational','motivation','motivating','hopeful','hope'],       tags:['inspiring','hope','emotional','moving'] },
+    { keys:['adventure','adventurous','explore','journey','quest'],                        tags:['adventure','exciting','epic'] },
+    { keys:['epic','grand','spectacular','massive','big'],                                 tags:['epic','adventure','exciting','superhero'] },
+    { keys:['dark','gritty','noir','bleak','disturbing'],                                  tags:['dark','gritty','intense','psychological'] },
+    { keys:['family','kids','children','child','whole family','with family'],              tags:['family-friendly','kids','fun'] },
+    { keys:['animated','animation','cartoon','pixar'],                                     tags:['kids','family-friendly','fun','musical'] },
+    { keys:['action','fight','combat','war','battle'],                                     tags:['action-packed','adrenaline','exciting','adventure'] },
+    { keys:['superhero','hero','marvel','dc','comic','powers'],                            tags:['superhero','epic','exciting','fun'] },
+    { keys:['sci-fi','science fiction','space','future','robot','alien','universe'],       tags:['mind-bending','exciting','adventure','cool'] },
+    { keys:['thriller','suspense','mystery','detective','crime'],                          tags:['psychological','intense','mystery','twist'] },
+    { keys:['drama','deep','serious','life','story','real'],                               tags:['emotional','inspiring','moving','beautiful'] },
+    { keys:['classic','old','vintage','timeless','masterpiece'],                           tags:['classic','emotional','inspiring'] },
+    { keys:['music','musical','song','dance','soundtrack'],                                tags:['musical','dreamy','romantic'] },
+    { keys:['beautiful','visually stunning','gorgeous','cinematic'],                       tags:['beautiful','dreamy','emotional'] },
+    { keys:['deep','meaningful','philosophical','thought provoking','thought-provoking'],  tags:['mind-bending','psychological','emotional','beautiful'] },
+  ];
+
+  function smartMatchMovies(query, movieList) {
+    const q = query.toLowerCase().replace(/[^a-z0-9 '-]/g,' ').replace(/\s+/g,' ').trim();
+    const matchedTags = new Set();
+    const matchedGenres = new Set();
+
+    INTENT_MAP.forEach(({ keys, tags }) => {
+      if (keys.some(k => q.includes(k))) tags.forEach(t => matchedTags.add(t));
+    });
+    ['action','drama','thriller','romance','animation','comedy','horror','sci-fi','sci fi'].forEach(g => {
+      if (q.includes(g)) matchedGenres.add(g.replace(' ','-'));
+    });
+
+    const scored = movieList.map(m => {
+      let score = 0;
+      m.mood.forEach(tag => { if (matchedTags.has(tag)) score += 3; });
+      m.genres.forEach(g => {
+        if (matchedGenres.has(g.toLowerCase())) score += 4;
+        if (matchedTags.has(g.toLowerCase())) score += 2;
+      });
+      m.title.toLowerCase().split(' ').forEach(w => { if (q.includes(w) && w.length > 3) score += 5; });
+      q.split(' ').forEach(word => {
+        if (word.length < 3) return;
+        m.mood.forEach(t => { if (t.includes(word) || word.includes(t)) score += 1; });
+        m.genres.forEach(g => { if (g.toLowerCase().includes(word)) score += 2; });
+      });
+      return { movie: m, score };
+    }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).map(x => x.movie);
+
+    if (!scored.length) {
+      const words = q.split(' ').filter(w => w.length > 2);
+      return movieList.filter(m =>
+        words.some(w =>
+          m.title.toLowerCase().includes(w) ||
+          m.mood.some(t => t.includes(w)) ||
+          m.genres.some(g => g.toLowerCase().includes(w))
+        )
+      );
+    }
+    return scored;
+  }
+
+  function generateSearchReasoning(query, results) {
+    if (!results.length) return null;
+    const q = query.toLowerCase();
+    if (q.includes('cry') || q.includes('sad') || q.includes('emotional'))
+      return 'These films are known for their deeply emotional stories — have tissues ready! 🥺';
+    if (q.includes('family') || q.includes('kids'))
+      return 'Perfect picks for a cozy family movie night! 🍿';
+    if (q.includes('scary') || q.includes('horror'))
+      return "These will keep you on the edge of your seat — watch with the lights on! 👁️";
+    if (q.includes('funny') || q.includes('laugh') || q.includes('comedy'))
+      return 'These are guaranteed to get you laughing! 😄';
+    if (q.includes('mind') || q.includes('twist') || q.includes('psychological'))
+      return 'Prepare to question reality — these films will blow your mind! 🧠';
+    if (q.includes('action') || q.includes('adrenaline'))
+      return 'Buckle up — these are packed with non-stop action! 💥';
+    if (q.includes('romantic') || q.includes('love') || q.includes('romance'))
+      return 'Perfect for a romantic evening! ❤️';
+    if (q.includes('inspir') || q.includes('hope') || q.includes('motivat'))
+      return 'These stories will lift your spirits and leave you feeling inspired! ✨';
+    const genres = [...new Set(results.flatMap(m => m.genres))].slice(0,2).join(' & ');
+    return `Found ${results.length} great ${genres || 'movie'} picks matching "${query}"!`;
+  }
+
+  // ======== AI SEARCH (uses smart local matcher) ========
+  async function runSearch(query) {
+    if (!query) return;
+    document.getElementById('suggestionsWrap').style.display = 'none';
+    document.getElementById('resultsSection').style.display = 'none';
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('aiReasoning').classList.remove('show');
+    document.getElementById('aiThinking').classList.add('show');
+    document.getElementById('aiThinkingText').textContent = 'Analyzing your request…';
+
+    // Brief delay for perceived thinking
+    await new Promise(r => setTimeout(r, 700));
+    document.getElementById('aiThinking').classList.remove('show');
+
+    const catalogue = ALL_MOVIES.filter(m => activeFilter === 'all' || m.genres.includes(activeFilter));
+    const results   = smartMatchMovies(query, catalogue);
+    const reasoning = generateSearchReasoning(query, results);
+
+    showResults(
+      results,
+      `${results.length} match${results.length !== 1 ? 'es' : ''} for "${query}"`,
+      reasoning,
+      true
+    );
+  }
+
+  // ======== SHOW RESULTS ========
+  function showResults(movies, countText, reasoning, isAI) {
+    document.getElementById('resultsCount').textContent = '— ' + countText;
+
+    if (reasoning) {
+      const box = document.getElementById('aiReasoning');
+      box.innerHTML = `<strong>🤖 Claude:</strong> ${reasoning}`;
+      box.classList.add('show');
+    }
+
+    if (!movies.length) {
+      document.getElementById('resultsSection').style.display = 'none';
+      document.getElementById('emptyState').classList.remove('hidden');
+      document.getElementById('emptyTitle').textContent = 'No matches found';
+      document.getElementById('emptyMsg').textContent = 'Try a different description or change the genre filter.';
+      return;
+    }
+
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('resultsSection').style.display = 'block';
+
+    document.getElementById('resultsGrid').innerHTML = movies.map((m, idx) => `
+      <div class="result-card" data-idx="${idx}">
+        ${isAI && idx === 0 ? '<div class="ai-match-badge">Best Match</div>' : ''}
+        <img src="${m.poster}" alt="${m.title}" loading="lazy" onerror="this.style.background='#333'"/>
+        <div class="result-card-overlay">
+          <div class="result-card-title">${m.title}</div>
+          <div class="result-card-actions">
+            <button class="rc-btn rc-play" data-video="${m.videoId}" data-title="${m.title}" data-poster="${m.poster}">▶ Play</button>
+            <button class="rc-btn rc-info" onclick="window.location.href='movie.html?title=${encodeURIComponent(m.title)}'">ⓘ Info</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    // Play buttons
+    document.querySelectorAll('.rc-btn.rc-play').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        openTrailer(btn.dataset.video, btn.dataset.title, btn.dataset.poster);
+      });
+    });
+
+    // Click card = open detail
+    document.querySelectorAll('.result-card').forEach(card => {
+      card.addEventListener('click', e => {
+        if (e.target.closest('.rc-btn')) return;
+        const m = movies[parseInt(card.dataset.idx)];
+        window.location.href = `movie.html?title=${encodeURIComponent(m.title)}`;
+      });
+    });
+  }
+
+  // ======== TRAILER ========
+  function openTrailer(videoId, title, poster) {
+    document.getElementById('trailerFrame').src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+    document.getElementById('trailerModal').classList.remove('hidden');
+    if (session) {
+      const key = profileKey('nf_history');
+      let h = JSON.parse(localStorage.getItem(key)||'[]');
+      h = h.filter(x => x.title !== title);
+      h.unshift({ title, poster, progress:Math.floor(Math.random()*60)+20, watchedOn:'Just now', watchedAt:new Date().toISOString() });
+      localStorage.setItem(key, JSON.stringify(h.slice(0,10)));
+    }
+  }
+  document.getElementById('closeModal').addEventListener('click', () => {
+    document.getElementById('trailerFrame').src = '';
+    document.getElementById('trailerModal').classList.add('hidden');
+  });
+  document.getElementById('trailerModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('trailerModal')) {
+      document.getElementById('trailerFrame').src = '';
+      document.getElementById('trailerModal').classList.add('hidden');
+    }
+  });
+
+  // ======== DROPDOWN / LOGOUT ========
+  const avatarBtn = document.getElementById('avatarBtn');
+  const dropdown  = document.getElementById('userDropdown');
+  avatarBtn.addEventListener('click', e => { e.stopPropagation(); dropdown.classList.toggle('open'); });
+  document.addEventListener('click', () => dropdown.classList.remove('open'));
+  dropdown.addEventListener('click', e => e.stopPropagation());
+  document.getElementById('logoutBtn').addEventListener('click', e => {
+    e.preventDefault();
+    localStorage.removeItem('nf_session'); sessionStorage.removeItem('nf_session');
+    window.location.href = 'auth.html';
+  });
+
+  // ======== VOICE SEARCH ON SEARCH PAGE ========
+  const voiceBtnSearch = document.getElementById('voiceBtnSearch');
+  let searchRecognition = null;
+
+  voiceBtnSearch.addEventListener('click', () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) { alert("Voice search requires Chrome or Edge."); return; }
+
+    if (searchRecognition) { try { searchRecognition.stop(); } catch(e){} }
+
+    searchRecognition = new SpeechRecognition();
+    searchRecognition.lang = 'en-US';
+    searchRecognition.continuous = false;
+    searchRecognition.interimResults = true;
+
+    voiceBtnSearch.textContent = '🔴';
+    voiceBtnSearch.style.borderColor = '#e50914';
+    voiceBtnSearch.style.color = '#e50914';
+
+    searchRecognition.onresult = (e) => {
+      const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+      input.value = transcript;
+      clearBtn.classList.remove('hidden');
+      if (e.results[0].isFinal) {
+        voiceBtnSearch.textContent = '🎤';
+        voiceBtnSearch.style.borderColor = '';
+        voiceBtnSearch.style.color = '';
+        clearTimeout(searchTimer);
+        runSearch(transcript);
+      }
+    };
+    searchRecognition.onerror = () => {
+      voiceBtnSearch.textContent = '🎤';
+      voiceBtnSearch.style.borderColor = '';
+      voiceBtnSearch.style.color = '';
+    };
+    searchRecognition.onend = () => {
+      voiceBtnSearch.textContent = '🎤';
+      voiceBtnSearch.style.borderColor = '';
+      voiceBtnSearch.style.color = '';
+    };
+    searchRecognition.start();
+  });
+
+  // Keyboard shortcut V
+  document.addEventListener('keydown', e => {
+    if ((e.key === 'v' || e.key === 'V') && document.activeElement !== input) {
+      voiceBtnSearch.click();
+    }
+  });
+
+  // ======== INIT — check URL param ========
+  const urlParams = new URLSearchParams(window.location.search);
+  const preQuery = urlParams.get('q');
+  if (preQuery) {
+    input.value = preQuery;
+    clearBtn.classList.remove('hidden');
+    runSearch(preQuery);
+  }
+  </script>
+</body>
+</html>

@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Netflix Clone — Movie Detail</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    /* ---- HERO BACKDROP ---- */
+    .movie-hero {
+      position: relative; min-height: 70vh;
+      display: flex; align-items: flex-end;
+      overflow: hidden;
+    }
+    .movie-hero-bg {
+      position: absolute; inset: 0;
+      background-size: cover; background-position: center top;
+      filter: brightness(.35);
+      transform: scale(1.04);
+      transition: filter .4s;
+    }
+    .movie-hero::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, transparent 30%, #141414 100%);
+    }
+    .movie-hero-inner {
+      position: relative; z-index: 2;
+      padding: 0 6% 48px;
+      max-width: 900px;
+      animation: fadeUp .5s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+    /* META CHIPS */
+    .meta-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: center; }
+    .chip {
+      padding: 4px 12px; border-radius: 20px; font-size: .72rem; font-weight: 600;
+      letter-spacing: .06em; text-transform: uppercase;
+    }
+    .chip-year   { background: rgba(255,255,255,.1);  color: #ccc; }
+    .chip-genre  { background: rgba(229,9,20,.15);    color: #e50914; border: 1px solid rgba(229,9,20,.3); }
+    .chip-rating { background: rgba(234,179,8,.12);   color: #fbbf24; border: 1px solid rgba(234,179,8,.3); }
+    .chip-dur    { background: rgba(255,255,255,.07); color: #aaa; }
+
+    .movie-title-big {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(2.4rem, 5vw, 4rem);
+      letter-spacing: 3px; margin: 0 0 14px; line-height: 1;
+    }
+    .movie-tagline { font-style: italic; color: #888; font-size: .9rem; margin-bottom: 16px; }
+    .movie-synopsis { color: #bbb; font-size: .95rem; line-height: 1.65; max-width: 680px; margin-bottom: 24px; }
+
+    /* ACTION BUTTONS */
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn-play-big {
+      padding: 13px 32px; background: #fff; color: #000;
+      border: none; border-radius: 7px;
+      font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 700;
+      cursor: pointer; transition: background .15s, transform .1s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .btn-play-big:hover { background: rgba(255,255,255,.85); }
+    .btn-play-big:active { transform: scale(.98); }
+    .btn-list-big {
+      padding: 13px 24px; background: rgba(109,109,110,.5); color: #fff;
+      border: none; border-radius: 7px;
+      font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: background .15s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .btn-list-big:hover { background: rgba(109,109,110,.75); }
+    .btn-rate-big {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: rgba(255,255,255,.1); border: 2px solid rgba(255,255,255,.4);
+      color: #fff; font-size: 1.1rem; cursor: pointer;
+      transition: background .15s, border-color .15s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .btn-rate-big:hover { background: rgba(255,255,255,.2); border-color: #fff; }
+
+    /* ---- PAGE BODY ---- */
+    .movie-body { max-width: 1100px; margin: 0 auto; padding: 0 6% 80px; }
+
+    /* DETAILS GRID */
+    .details-grid {
+      display: grid; grid-template-columns: 1fr 320px; gap: 48px; margin-bottom: 56px;
+    }
+    @media(max-width:800px){ .details-grid{ grid-template-columns:1fr; } }
+
+    .section-title {
+      font-family: 'Bebas Neue', cursive; font-size: 1.4rem; letter-spacing: 2px;
+      color: #fff; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+    }
+    .section-title::before { content:''; display:block; width:3px; height:20px; background:#e50914; border-radius:2px; }
+
+    /* CAST */
+    .cast-grid { display: flex; flex-wrap: wrap; gap: 14px; }
+    .cast-card {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      width: 80px;
+    }
+    .cast-avatar {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: linear-gradient(135deg, #333, #555);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Bebas Neue', cursive; font-size: 1.4rem; color: #fff;
+      flex-shrink: 0; border: 2px solid rgba(255,255,255,.1);
+      overflow: hidden;
+    }
+    .cast-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .cast-name { font-size: .72rem; color: #aaa; text-align: center; line-height: 1.3; }
+    .cast-role { font-size: .65rem; color: #666; text-align: center; }
+
+    /* SIDEBAR INFO */
+    .info-list { display: flex; flex-direction: column; gap: 14px; }
+    .info-item label { display: block; font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #666; margin-bottom: 3px; }
+    .info-item span  { font-size: .88rem; color: #ccc; }
+    .genre-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .genre-tag  { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); border-radius: 4px; padding: 3px 10px; font-size: .72rem; color: #aaa; }
+
+    /* AVERAGE RATING DISPLAY */
+    .avg-rating-block {
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 16px;
+    }
+    .avg-stars-big { font-size: 2rem; letter-spacing: 3px; margin-bottom: 4px; }
+    .avg-num { font-size: 1.6rem; font-weight: 700; color: #fbbf24; }
+    .avg-count { font-size: .78rem; color: #666; margin-top: 2px; }
+
+    /* ---- STAR RATING INPUT ---- */
+    .rating-section { margin-bottom: 56px; }
+    .rating-card {
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
+      border-radius: 12px; padding: 28px 32px;
+    }
+    .your-rating-label { font-size: .78rem; color: #888; margin-bottom: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+    .stars-input { display: flex; gap: 6px; margin-bottom: 16px; }
+    .star-btn {
+      font-size: 1.8rem; cursor: pointer; color: rgba(255,255,255,.2);
+      transition: color .12s, transform .1s; background: none; border: none;
+      padding: 0; line-height: 1;
+    }
+    .star-btn:hover, .star-btn.active { color: #fbbf24; }
+    .star-btn:hover { transform: scale(1.15); }
+    .review-textarea {
+      width: 100%; padding: 13px 16px; min-height: 90px; resize: vertical;
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.09);
+      border-radius: 7px; color: #fff; font-family: 'DM Sans', sans-serif; font-size: .9rem;
+      outline: none; transition: border-color .2s; margin-bottom: 14px;
+    }
+    .review-textarea:focus { border-color: rgba(229,9,20,.5); }
+    .review-textarea::placeholder { color: #444; }
+    .btn-submit-review {
+      padding: 11px 28px; background: #e50914; color: #fff; border: none;
+      border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: .9rem;
+      font-weight: 600; cursor: pointer; transition: background .2s;
+    }
+    .btn-submit-review:hover { background: #c1060f; }
+    .btn-submit-review:disabled { opacity: .5; cursor: not-allowed; }
+    .review-toast { font-size: .82rem; color: #4ade80; margin-left: 14px; opacity: 0; transition: opacity .3s; }
+    .review-toast.show { opacity: 1; }
+
+    /* ---- REVIEWS LIST ---- */
+    .reviews-section { margin-bottom: 56px; }
+    .review-item {
+      padding: 18px 0; border-bottom: 1px solid rgba(255,255,255,.06);
+      animation: fadeUp .3s ease both;
+    }
+    .review-item:last-child { border-bottom: none; }
+    .review-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+    .review-avatar {
+      width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: .9rem; color: #fff;
+    }
+    .review-name { font-weight: 600; font-size: .9rem; }
+    .review-stars { color: #fbbf24; font-size: .85rem; letter-spacing: 2px; }
+    .review-date  { font-size: .75rem; color: #555; margin-left: auto; }
+    .review-text  { font-size: .88rem; color: #aaa; line-height: 1.6; }
+    .review-profile-tag { font-size: .68rem; color: #666; background: rgba(255,255,255,.06); border-radius: 4px; padding: 2px 7px; }
+    .empty-reviews { text-align: center; padding: 32px 0; color: #555; font-size: .9rem; }
+
+    /* ---- SIMILAR MOVIES ---- */
+    .similar-section { margin-bottom: 40px; }
+    .similar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+    .similar-card {
+      border-radius: 8px; overflow: hidden; cursor: pointer;
+      transition: transform .18s, box-shadow .18s;
+      position: relative;
+    }
+    .similar-card:hover { transform: translateY(-6px) scale(1.03); box-shadow: 0 18px 30px rgba(0,0,0,.7); }
+    .similar-card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; background: #222; }
+    .similar-card-info {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(to top, rgba(0,0,0,.9), transparent);
+      padding: 24px 8px 8px; opacity: 0; transition: opacity .18s;
+    }
+    .similar-card:hover .similar-card-info { opacity: 1; }
+    .similar-card-info span { font-size: .72rem; font-weight: 600; }
+    @media(max-width:600px){ .similar-grid{ grid-template-columns:repeat(3,1fr); gap:10px; } }
+
+    /* ---- TRAILER MODAL ---- */
+    .modal{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.8); z-index:90; }
+    .modal-panel{ width:min(980px,94%); background:linear-gradient(#0b0b0b,#000); border-radius:10px; padding:14px; position:relative; }
+    .modal-close{ position:absolute; right:10px; top:8px; background:transparent; border:none; color:#fff; font-size:20px; cursor:pointer; }
+    .video-wrap{ width:100%; height:0; padding-bottom:56.25%; position:relative; }
+    .video-wrap iframe{ position:absolute; inset:0; width:100%; height:100%; border-radius:6px; }
+
+    /* SKELETON */
+    .skeleton { background: linear-gradient(90deg, rgba(255,255,255,.05) 25%, rgba(255,255,255,.1) 50%, rgba(255,255,255,.05) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <a href="index.html" class="logo" style="text-decoration:none;">NETFLIX</a>
+    <nav class="nav-desktop">
+      <a href="index.html">Home</a>
+      <a href="mylist.html">My List</a>
+      <a href="profile.html">Profile</a>
+      <a href="settings.html">Settings</a>
+    </nav>
+    <div class="nav-actions">
+      <div class="user-menu">
+        <div class="avatar" id="avatarBtn">U</div>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="dropdown-name">Signed in as<strong id="dropdownName">User</strong></div>
+          <a href="profile.html"  class="dropdown-item">My Profile</a>
+          <a href="settings.html" class="dropdown-item">Account Settings</a>
+          <a href="billing.html"  class="dropdown-item">Billing</a>
+          <a href="mylist.html"   class="dropdown-item">My List</a>
+          <a href="#" class="dropdown-item logout" id="logoutBtn">Sign Out</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <div class="movie-hero" id="movieHero">
+    <div class="movie-hero-bg" id="heroBg"></div>
+    <div class="movie-hero-inner">
+      <div class="meta-chips" id="metaChips">
+        <span class="chip chip-year skeleton" style="width:60px;height:22px;">&nbsp;</span>
+        <span class="chip chip-dur skeleton"  style="width:70px;height:22px;">&nbsp;</span>
+      </div>
+      <h1 class="movie-title-big skeleton" id="movieTitle" style="width:340px;height:54px;">&nbsp;</h1>
+      <p class="movie-tagline skeleton" id="movieTagline" style="width:260px;height:18px;">&nbsp;</p>
+      <p class="movie-synopsis skeleton" id="movieSynopsis" style="width:100%;height:64px;">&nbsp;</p>
+      <div class="hero-actions" id="heroActions">
+        <div class="skeleton" style="width:140px;height:48px;border-radius:7px;"></div>
+        <div class="skeleton" style="width:120px;height:48px;border-radius:7px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="movie-body">
+
+    <!-- DETAILS GRID -->
+    <div class="details-grid" id="detailsGrid">
+      <!-- LEFT: Cast -->
+      <div>
+        <div class="section-title">Cast</div>
+        <div class="cast-grid" id="castGrid">
+          <!-- skeleton cast -->
+          ${Array(6).fill('<div class="cast-card"><div class="cast-avatar skeleton" style="border:none;"></div><div class="skeleton" style="width:64px;height:10px;margin-top:4px;border-radius:4px;"></div></div>').join('')}
+        </div>
+      </div>
+      <!-- RIGHT: Info + Avg Rating -->
+      <div>
+        <div class="section-title">Details</div>
+        <div class="info-list" id="infoList">
+          <div class="skeleton" style="height:14px;width:180px;border-radius:4px;"></div>
+          <div class="skeleton" style="height:14px;width:140px;border-radius:4px;"></div>
+          <div class="skeleton" style="height:14px;width:160px;border-radius:4px;"></div>
+        </div>
+        <br/>
+        <div class="avg-rating-block" id="avgRatingBlock">
+          <div class="avg-stars-big" id="avgStars">☆☆☆☆☆</div>
+          <div class="avg-num" id="avgNum">—</div>
+          <div class="avg-count" id="avgCount">No ratings yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STAR RATING + REVIEW FORM -->
+    <div class="rating-section">
+      <div class="section-title">Rate & Review</div>
+      <div class="rating-card">
+        <div class="your-rating-label" id="yourRatingLabel">Your Rating</div>
+        <div class="stars-input" id="starsInput">
+          <button class="star-btn" data-val="1">★</button>
+          <button class="star-btn" data-val="2">★</button>
+          <button class="star-btn" data-val="3">★</button>
+          <button class="star-btn" data-val="4">★</button>
+          <button class="star-btn" data-val="5">★</button>
+        </div>
+        <textarea class="review-textarea" id="reviewText" placeholder="Write a review (optional)…" maxlength="500"></textarea>
+        <div style="display:flex;align-items:center;">
+          <button class="btn-submit-review" id="btnSubmitReview" disabled>Submit Review</button>
+          <span class="review-toast" id="reviewToast">✓ Review saved!</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- REVIEWS LIST -->
+    <div class="reviews-section">
+      <div class="section-title">Community Reviews</div>
+      <div id="reviewsList"></div>
+    </div>
+
+    <!-- AI CONTINUATION PREDICTOR -->
+    <div style="margin-bottom:52px;" id="continuationSection">
+      <div class="section-title">🔮 What Happens Next? <span style="font-family:'DM Sans',sans-serif;font-size:.72rem;font-weight:400;color:#e50914;letter-spacing:0;"> AI Prediction</span></div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:28px 32px;">
+        <p style="font-size:.88rem;color:#888;margin:0 0 18px;line-height:1.6;">
+          Stopped midway? Tell us where you paused — our AI will predict what happens next without spoiling everything.
+        </p>
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+          <textarea id="continuationInput" placeholder="Describe where you stopped… e.g. 'Tony just snapped his fingers' or 'The team entered the dream level 2'" style="
+            flex:1;min-width:200px;padding:12px 16px;min-height:80px;resize:vertical;
+            background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);
+            border-radius:8px;color:#fff;font-family:'DM Sans',sans-serif;font-size:.9rem;
+            outline:none;transition:border-color .2s;
+          "></textarea>
+        </div>
+        <button id="btnPredict" style="
+          padding:11px 28px;background:#e50914;color:#fff;border:none;border-radius:7px;
+          font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer;
+          transition:background .2s;display:flex;align-items:center;gap:8px;
+        ">🔮 Predict What Happens Next</button>
+        <div id="continuationResult" style="display:none;margin-top:20px;padding:18px 20px;
+          background:linear-gradient(135deg,rgba(229,9,20,.08),rgba(255,107,53,.05));
+          border:1px solid rgba(229,9,20,.2);border-radius:10px;
+          font-size:.9rem;color:#ddd;line-height:1.7;"></div>
+      </div>
+    </div>
+
+    <!-- AI SCENE FINDER -->
+    <div style="margin-bottom:52px;" id="sceneFinderSection">
+      <div class="section-title">🎯 Scene Finder <span style="font-family:'DM Sans',sans-serif;font-size:.72rem;font-weight:400;color:#e50914;letter-spacing:0;"> AI Powered</span></div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:28px 32px;">
+        <p style="font-size:.88rem;color:#888;margin:0 0 18px;line-height:1.6;">
+          Remember a scene but not sure which movie it's from? Describe it — our AI will identify it.
+        </p>
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+          <textarea id="sceneInput" placeholder="Describe a scene… e.g. 'A man in a suit falls backwards into slow motion water' or 'Two people fight in a hallway that keeps rotating'" style="
+            flex:1;min-width:200px;padding:12px 16px;min-height:80px;resize:vertical;
+            background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);
+            border-radius:8px;color:#fff;font-family:'DM Sans',sans-serif;font-size:.9rem;
+            outline:none;transition:border-color .2s;
+          "></textarea>
+        </div>
+        <button id="btnFindScene" style="
+          padding:11px 28px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.15);
+          border-radius:7px;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:600;
+          cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px;
+        ">🎯 Find This Scene</button>
+        <div id="sceneResult" style="display:none;margin-top:20px;"></div>
+      </div>
+    </div>
+
+    <!-- WATCH PARTY BUTTON -->
+    <div style="margin-bottom:52px;padding:24px 32px;background:rgba(229,9,20,.06);border:1px solid rgba(229,9,20,.2);border-radius:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+      <div>
+        <div style="font-size:1rem;font-weight:600;margin-bottom:4px;">🎉 Watch with Friends</div>
+        <div style="font-size:.84rem;color:#888;">Start a watch party and enjoy this movie in sync with friends + AI chat.</div>
+      </div>
+      <button id="btnStartParty" style="
+        padding:12px 28px;background:#e50914;color:#fff;border:none;border-radius:8px;
+        font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer;
+        white-space:nowrap;transition:background .2s;flex-shrink:0;
+      ">🎬 Start Watch Party</button>
+    </div>
+
+    <!-- SIMILAR MOVIES -->
+    <div class="similar-section">
+      <div class="section-title">More Like This</div>
+      <div class="similar-grid" id="similarGrid"></div>
+    </div>
+
+  </div><!-- /movie-body -->
+
+  <!-- TRAILER MODAL -->
+  <div id="trailerModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-panel">
+      <button id="closeModal" class="modal-close">✕</button>
+      <div class="video-wrap">
+        <iframe id="trailerFrame" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script src="profile-key.js"></script>
+  <script src="i18n.js"></script>
+  <script>
+  // ======== SESSION ========
+  const session = JSON.parse(localStorage.getItem('nf_session') || sessionStorage.getItem('nf_session') || 'null');
+  if (!session) { window.location.replace('auth.html'); }
+
+  const initial = session.name ? session.name.charAt(0).toUpperCase() : 'U';
+  const _users  = JSON.parse(localStorage.getItem('nf_users') || '[]');
+  const _cu     = _users.find(u => u.email === session.email);
+  document.getElementById('avatarBtn').textContent = initial;
+  document.getElementById('avatarBtn').style.background = (_cu?.avatarColor) || '#e50914';
+  document.getElementById('dropdownName').textContent = session.name;
+
+  // ======== MOVIE DATABASE (full detail — all 24 movies) ========
+  const MOVIE_DB = [
+    { title:"Avengers: Endgame",        poster:"https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg",   videoId:"hA6hldpSTF8",   year:2019, duration:"3h 1m",  genres:["Action","Sci-Fi"],     director:"Anthony & Joe Russo",   tagline:"Part of the journey is the end.",                        synopsis:"After the devastating events of Infinity War, the remaining Avengers assemble once more to undo Thanos's actions and restore balance to the universe once and for all.",                                                                      cast:[{name:"Robert Downey Jr.",role:"Tony Stark"},{name:"Chris Evans",role:"Steve Rogers"},{name:"Mark Ruffalo",role:"Bruce Banner"},{name:"Chris Hemsworth",role:"Thor"},{name:"Scarlett Johansson",role:"Natasha Romanoff"},{name:"Jeremy Renner",role:"Clint Barton"}] },
+    { title:"The Dark Knight",          poster:"https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",   videoId:"EXeTwQWrcwY",   year:2008, duration:"2h 32m", genres:["Action","Thriller"],   director:"Christopher Nolan",     tagline:"Why so serious?",                                        synopsis:"When the Joker unleashes chaos on Gotham City, Batman must confront one of the greatest psychological tests of his ability to fight injustice — at enormous personal cost.",                                                                cast:[{name:"Christian Bale",role:"Bruce Wayne"},{name:"Heath Ledger",role:"The Joker"},{name:"Aaron Eckhart",role:"Harvey Dent"},{name:"Michael Caine",role:"Alfred"},{name:"Maggie Gyllenhaal",role:"Rachel Dawes"},{name:"Gary Oldman",role:"Commissioner Gordon"}] },
+    { title:"Interstellar",             poster:"https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg",   videoId:"zSWdZVtXT7E",   year:2014, duration:"2h 49m", genres:["Sci-Fi","Drama"],      director:"Christopher Nolan",     tagline:"Mankind was born on Earth. It was never meant to die here.", synopsis:"A team of explorers travels through a wormhole in space to ensure humanity's survival as Earth faces environmental collapse, bending time and space in the process.",                                                                        cast:[{name:"Matthew McConaughey",role:"Cooper"},{name:"Anne Hathaway",role:"Brand"},{name:"Jessica Chastain",role:"Murphy (adult)"},{name:"Michael Caine",role:"Prof. Brand"},{name:"Matt Damon",role:"Dr. Mann"},{name:"Mackenzie Foy",role:"Murphy (young)"}] },
+    { title:"Spider-Man: No Way Home",  poster:"https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg",   videoId:"JfVOs4VSpmA",   year:2021, duration:"2h 28m", genres:["Action","Sci-Fi"],     director:"Jon Watts",             tagline:"The multiverse unleashed.",                              synopsis:"Peter Parker asks Doctor Strange to make the world forget he is Spider-Man, accidentally opening the multiverse and unleashing villains from alternate realities.",                                                                         cast:[{name:"Tom Holland",role:"Peter Parker"},{name:"Zendaya",role:"MJ"},{name:"Benedict Cumberbatch",role:"Doctor Strange"},{name:"Jacob Batalon",role:"Ned Leeds"},{name:"Jamie Foxx",role:"Electro"},{name:"Alfred Molina",role:"Doc Ock"}] },
+    { title:"Black Panther",            poster:"https://image.tmdb.org/t/p/w500/uxzzxijgPIY7slzFvMotPv8wjKA.jpg",   videoId:"xjDjIWPwcPU",   year:2018, duration:"2h 14m", genres:["Action","Sci-Fi"],     director:"Ryan Coogler",          tagline:"Long live the king.",                                    synopsis:"T'Challa returns home to the isolated nation of Wakanda to succeed to the throne, but finds his sovereignty challenged by a powerful enemy.",                                                                                               cast:[{name:"Chadwick Boseman",role:"T'Challa"},{name:"Michael B. Jordan",role:"Killmonger"},{name:"Lupita Nyong'o",role:"Nakia"},{name:"Danai Gurira",role:"Okoye"},{name:"Martin Freeman",role:"Everett Ross"},{name:"Letitia Wright",role:"Shuri"}] },
+    { title:"Inception",                poster:"https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",   videoId:"YoHD9XEInc0",   year:2010, duration:"2h 28m", genres:["Thriller","Sci-Fi"],   director:"Christopher Nolan",     tagline:"Your mind is the scene of the crime.",                   synopsis:"A skilled thief who steals secrets through dream-sharing technology is given the inverse task of planting an idea, but his tragic past threatens everything.",                                                                               cast:[{name:"Leonardo DiCaprio",role:"Dom Cobb"},{name:"Joseph Gordon-Levitt",role:"Arthur"},{name:"Elliot Page",role:"Ariadne"},{name:"Tom Hardy",role:"Eames"},{name:"Ken Watanabe",role:"Saito"},{name:"Cillian Murphy",role:"Robert Fischer"}] },
+    { title:"Inglourious Basterds",     poster:"https://upload.wikimedia.org/wikipedia/en/c/c3/Inglourious_Basterds_poster.jpg", videoId:"KnrRy6kSFF0", year:2009, duration:"2h 33m", genres:["Action","Drama"],  director:"Quentin Tarantino",     tagline:"Once upon a time in Nazi-occupied France.",              synopsis:"In German-occupied France, a group of Jewish-American soldiers known as 'The Basterds' plan to assassinate Nazi leaders, converging with a young French cinema owner's own revenge plot.",                                                cast:[{name:"Brad Pitt",role:"Lt. Aldo Raine"},{name:"Christoph Waltz",role:"Hans Landa"},{name:"Mélanie Laurent",role:"Shosanna"},{name:"Michael Fassbender",role:"Archie Hicox"},{name:"Eli Roth",role:"Donny Donowitz"},{name:"Diane Kruger",role:"Bridget von Hammersmark"}] },
+    { title:"Finding Nemo",             poster:"https://upload.wikimedia.org/wikipedia/en/2/29/Finding_Nemo.jpg",                videoId:"2zLkasScy7A",  year:2003, duration:"1h 40m", genres:["Animation","Kids"], director:"Andrew Stanton",        tagline:"There are 3.7 trillion fish in the ocean. They're looking for one.", synopsis:"After his son Nemo is taken by a scuba diver, an overprotective clownfish named Marlin embarks on an epic ocean journey to bring him home, helped by a friendly but forgetful fish named Dory.", cast:[{name:"Albert Brooks",role:"Marlin (voice)"},{name:"Ellen DeGeneres",role:"Dory (voice)"},{name:"Alexander Gould",role:"Nemo (voice)"},{name:"Willem Dafoe",role:"Gill (voice)"},{name:"Brad Garrett",role:"Bloat (voice)"},{name:"Allison Janney",role:"Peach (voice)"}] },
+    { title:"Frozen",                   poster:"https://upload.wikimedia.org/wikipedia/en/0/05/Frozen_%282013_film%29_poster.jpg",videoId:"TbQm5doF_Uc",  year:2013, duration:"1h 42m", genres:["Animation","Kids"], director:"Chris Buck & Jennifer Lee", tagline:"Only the act of true love will thaw a frozen heart.",  synopsis:"When Elsa's icy powers accidentally trap Arendelle in eternal winter, her sister Anna teams up with a rugged mountain man, his loyal reindeer, and a naïve snowman to save the kingdom.",                                                  cast:[{name:"Idina Menzel",role:"Elsa (voice)"},{name:"Kristen Bell",role:"Anna (voice)"},{name:"Jonathan Groff",role:"Kristoff (voice)"},{name:"Josh Gad",role:"Olaf (voice)"},{name:"Santino Fontana",role:"Hans (voice)"},{name:"Alan Tudyk",role:"Duke (voice)"}] },
+    { title:"The Prestige",             poster:"https://upload.wikimedia.org/wikipedia/en/d/d2/Prestige_poster.jpg",             videoId:"ijXruSzfGEc",  year:2006, duration:"2h 10m", genres:["Thriller","Drama"], director:"Christopher Nolan",     tagline:"Are you watching closely?",                              synopsis:"Two stage magicians engage in a bitter rivalry, obsessively trying to outdo each other with increasingly dangerous illusions that exact a devastating toll on them and those closest to them.",                                               cast:[{name:"Hugh Jackman",role:"Robert Angier"},{name:"Christian Bale",role:"Alfred Borden"},{name:"Michael Caine",role:"Cutter"},{name:"Scarlett Johansson",role:"Olivia"},{name:"Rebecca Hall",role:"Sarah"},{name:"Andy Serkis",role:"Alley"}] },
+    { title:"Forrest Gump",             poster:"https://upload.wikimedia.org/wikipedia/en/6/67/Forrest_Gump_poster.jpg",         videoId:"bLvqoHBptjg",  year:1994, duration:"2h 22m", genres:["Drama","Romance"],  director:"Robert Zemeckis",       tagline:"Life is like a box of chocolates.",                      synopsis:"A man with a low IQ witnesses and unwittingly influences several defining historical events in 20th century America, all while searching for his childhood sweetheart Jenny.",                                                               cast:[{name:"Tom Hanks",role:"Forrest Gump"},{name:"Robin Wright",role:"Jenny Curran"},{name:"Gary Sinise",role:"Lt. Dan Taylor"},{name:"Mykelti Williamson",role:"Bubba Blue"},{name:"Sally Field",role:"Mrs. Gump"},{name:"Haley Joel Osment",role:"Forrest Jr."}] },
+    { title:"La La Land",               poster:"https://upload.wikimedia.org/wikipedia/en/a/ab/La_La_Land_%28film%29.png",       videoId:"0pdqf4P9MB8",  year:2016, duration:"2h 8m",  genres:["Romance","Drama"],  director:"Damien Chazelle",       tagline:"Here's to the fools who dream.",                         synopsis:"A jazz pianist and an aspiring actress fall in love in Los Angeles while pursuing their dreams, testing whether their romance can survive the realities of ambition and compromise.",                                                        cast:[{name:"Ryan Gosling",role:"Sebastian Wilder"},{name:"Emma Stone",role:"Mia Dolan"},{name:"John Legend",role:"Keith"},{name:"Rosemarie DeWitt",role:"Laura"},{name:"J.K. Simmons",role:"Bill"},{name:"Finn Wittrock",role:"Greg"}] },
+    { title:"Joker",                    poster:"https://upload.wikimedia.org/wikipedia/en/e/e1/Joker_%282019_film%29_poster.jpg",videoId:"zAGVQLHvwOY",  year:2019, duration:"2h 2m",  genres:["Thriller","Drama"], director:"Todd Phillips",          tagline:"Put on a happy face.",                                   synopsis:"Struggling stand-up comedian Arthur Fleck is disregarded by society, leading him down a downward spiral of mental illness and violence, ultimately transforming him into the criminal mastermind known as the Joker.",                      cast:[{name:"Joaquin Phoenix",role:"Arthur Fleck"},{name:"Robert De Niro",role:"Murray Franklin"},{name:"Zazie Beetz",role:"Sophie Dumond"},{name:"Frances Conroy",role:"Penny Fleck"},{name:"Brett Cullen",role:"Thomas Wayne"},{name:"Glenn Fleshler",role:"Randall"}] },
+    { title:"The Matrix",               poster:"https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",   videoId:"m8e-FF8MsqU",   year:1999, duration:"2h 16m", genres:["Action","Sci-Fi"],     director:"The Wachowskis",        tagline:"Free your mind.",                                        synopsis:"A computer programmer discovers that reality is a simulated world controlled by machines, and joins the underground resistance to liberate humanity.",                                                                                       cast:[{name:"Keanu Reeves",role:"Neo / Thomas Anderson"},{name:"Laurence Fishburne",role:"Morpheus"},{name:"Carrie-Anne Moss",role:"Trinity"},{name:"Hugo Weaving",role:"Agent Smith"},{name:"Joe Pantoliano",role:"Cypher"},{name:"Gloria Foster",role:"The Oracle"}] },
+    { title:"The Avengers",             poster:"https://image.tmdb.org/t/p/w500/RYMX2wcKCBAr24UyPD7xwmjaTn.jpg",    videoId:"eOrNdBpGMv8",   year:2012, duration:"2h 23m", genres:["Action","Sci-Fi"],     director:"Joss Whedon",           tagline:"Some assembly required.",                                synopsis:"Nick Fury of S.H.I.E.L.D. assembles a team of superhumans — Iron Man, Captain America, Thor, the Hulk, Black Widow, and Hawkeye — to stop Loki and his alien army.",                                                                      cast:[{name:"Robert Downey Jr.",role:"Tony Stark"},{name:"Chris Evans",role:"Steve Rogers"},{name:"Chris Hemsworth",role:"Thor"},{name:"Mark Ruffalo",role:"Bruce Banner"},{name:"Scarlett Johansson",role:"Natasha Romanoff"},{name:"Tom Hiddleston",role:"Loki"}] },
+    { title:"Mad Max: Fury Road",       poster:"https://image.tmdb.org/t/p/w500/8tZYtuWezp8JbcsvHYO0O46tFbo.jpg",   videoId:"hEJnMQG9ev8",   year:2015, duration:"2h 0m",  genres:["Action","Sci-Fi"],     director:"George Miller",         tagline:"What a lovely day.",                                     synopsis:"In a post-apocalyptic wasteland, imperator Furiosa leads a group of enslaved women to freedom, pursued by the warlord Immortan Joe and his army, with a drifter named Max caught in the middle.",                                         cast:[{name:"Tom Hardy",role:"Max Rockatansky"},{name:"Charlize Theron",role:"Imperator Furiosa"},{name:"Nicholas Hoult",role:"Nux"},{name:"Hugh Keays-Byrne",role:"Immortan Joe"},{name:"Rosie Huntington-Whiteley",role:"The Splendid Angharad"},{name:"Riley Keough",role:"Capable"}] },
+    { title:"John Wick",                poster:"https://image.tmdb.org/t/p/w500/ziEuG1essDuWuC5lpWUaw1uXY2O.jpg",   videoId:"2AUmvWm5ZDQ",   year:2014, duration:"1h 41m", genres:["Action","Thriller"],   director:"Chad Stahelski",        tagline:"Don't set him off.",                                     synopsis:"Legendary assassin John Wick comes out of retirement after the son of a Russian mob boss kills his dog — a final gift from his recently deceased wife.",                                                                                   cast:[{name:"Keanu Reeves",role:"John Wick"},{name:"Michael Nyqvist",role:"Viggo Tarasov"},{name:"Alfie Allen",role:"Iosef Tarasov"},{name:"Willem Dafoe",role:"Marcus"},{name:"Dean Winters",role:"Avi"},{name:"Adrianne Palicki",role:"Ms. Perkins"}] },
+    { title:"The Lion King",            poster:"https://upload.wikimedia.org/wikipedia/en/3/3d/The_Lion_King_poster.jpg",        videoId:"7TavVZMewpY",  year:1994, duration:"1h 28m", genres:["Animation","Kids"], director:"Roger Allers & Rob Minkoff", tagline:"Life's greatest adventure is finding your place in the Circle of Life.", synopsis:"Young lion prince Simba flees his kingdom after his uncle Scar murders his father and frames him for it, but years later he must return to challenge the usurper.",                                                                 cast:[{name:"Matthew Broderick",role:"Simba (voice)"},{name:"Jeremy Irons",role:"Scar (voice)"},{name:"James Earl Jones",role:"Mufasa (voice)"},{name:"Moira Kelly",role:"Nala (voice)"},{name:"Nathan Lane",role:"Timon (voice)"},{name:"Ernie Sabella",role:"Pumbaa (voice)"}] },
+    { title:"The Shawshank Redemption", poster:"https://upload.wikimedia.org/wikipedia/en/8/81/ShawshankRedemptionMoviePoster.jpg",videoId:"6hB3S9bIaco", year:1994, duration:"2h 22m", genres:["Drama"],            director:"Frank Darabont",        tagline:"Fear can hold you prisoner. Hope can set you free.",     synopsis:"Wrongly convicted banker Andy Dufresne forms a lifelong friendship with fellow inmate Red in Shawshank prison, clinging to hope through years of brutal injustice.",                                                                       cast:[{name:"Tim Robbins",role:"Andy Dufresne"},{name:"Morgan Freeman",role:"Ellis Boyd 'Red' Redding"},{name:"Bob Gunton",role:"Warden Norton"},{name:"William Sadler",role:"Heywood"},{name:"Clancy Brown",role:"Capt. Hadley"},{name:"James Whitmore",role:"Brooks Hatlen"}] },
+    { title:"Guardians of the Galaxy Vol. 2", poster:"https://image.tmdb.org/t/p/w500/y4MBh0EjBlMuOzv9axM4qJlmhzz.jpg", videoId:"dW1BIid8Osg", year:2017, duration:"2h 16m", genres:["Action","Sci-Fi"], director:"James Gunn",            tagline:"Obviously.",                                             synopsis:"The Guardians struggle to keep their newfound family together while Peter Quill uncovers the mystery of his true parentage and a powerful villain's scheme.",                                                                              cast:[{name:"Chris Pratt",role:"Peter Quill / Star-Lord"},{name:"Zoe Saldana",role:"Gamora"},{name:"Dave Bautista",role:"Drax"},{name:"Vin Diesel",role:"Baby Groot (voice)"},{name:"Bradley Cooper",role:"Rocket (voice)"},{name:"Kurt Russell",role:"Ego"}] },
+    { title:"Doctor Strange in the Multiverse of Madness", poster:"https://image.tmdb.org/t/p/w500/9Gtg2DzBhmYamXBS1hKAhiwbBKS.jpg", videoId:"aWzlQ2N6qqg", year:2022, duration:"2h 6m", genres:["Action","Sci-Fi"], director:"Sam Raimi",             tagline:"Enter a universe beyond imagination.",                   synopsis:"Doctor Strange teams with a mysterious teenager who can travel between multiverses to face a powerful adversary determined to harness her abilities.",                                                                                       cast:[{name:"Benedict Cumberbatch",role:"Doctor Strange"},{name:"Elizabeth Olsen",role:"Wanda Maximoff"},{name:"Xochitl Gomez",role:"America Chavez"},{name:"Benedict Wong",role:"Wong"},{name:"Rachel McAdams",role:"Christine Palmer"},{name:"Chiwetel Ejiofor",role:"Karl Mordo"}] },
+    { title:"Eternal Sunshine",         poster:"https://image.tmdb.org/t/p/w500/5MwkWH9tYHv3mV9OdYTMR5qreIz.jpg",   videoId:"gHCzXHCJN9M",   year:2004, duration:"1h 48m", genres:["Romance","Drama"],     director:"Michel Gondry",         tagline:"You can erase someone from your mind. Getting them out of your heart is another story.", synopsis:"When Joel discovers his ex-girlfriend Clementine has erased him from her memory, he undergoes the same procedure — but midway through, realises he wants to keep her.",                                                                    cast:[{name:"Jim Carrey",role:"Joel Barish"},{name:"Kate Winslet",role:"Clementine Kruczynski"},{name:"Tom Wilkinson",role:"Dr. Howard Mierzwiak"},{name:"Elijah Wood",role:"Patrick"},{name:"Kirsten Dunst",role:"Mary"},{name:"Mark Ruffalo",role:"Stan"}] },
+    { title:"Get Out",                  poster:"https://image.tmdb.org/t/p/w500/tFXcEccSQMf3lfhfXKSU9iRBpa3.jpg",   videoId:"DzfpyUB60YY",   year:2017, duration:"1h 44m", genres:["Thriller","Horror"],   director:"Jordan Peele",          tagline:"Just because you're invited, doesn't mean you're welcome.", synopsis:"When Chris visits his white girlfriend's family estate, a series of disturbing discoveries leads him to a terrifying truth about their seemingly friendly community.",                                                                     cast:[{name:"Daniel Kaluuya",role:"Chris Washington"},{name:"Allison Williams",role:"Rose Armitage"},{name:"Bradley Whitford",role:"Dean Armitage"},{name:"Catherine Keener",role:"Missy Armitage"},{name:"Caleb Landry Jones",role:"Jeremy Armitage"},{name:"Lil Rel Howery",role:"Rod Williams"}] },
+    { title:"Knives Out",               poster:"https://image.tmdb.org/t/p/w500/pThyQovXQrws2Q07WV2B5K0HBsW.jpg",   videoId:"qGqiHJTsRkQ",   year:2019, duration:"2h 10m", genres:["Thriller","Comedy"],   director:"Rian Johnson",          tagline:"Hell of a time to lose your head.",                      synopsis:"When renowned crime novelist Harlan Thrombey is found dead the morning after his 85th birthday party, detective Benoit Blanc unravels a complex web of lies and suspects.",                                                                cast:[{name:"Daniel Craig",role:"Benoit Blanc"},{name:"Ana de Armas",role:"Marta Cabrera"},{name:"Chris Evans",role:"Hugh Ransom Drysdale"},{name:"Jamie Lee Curtis",role:"Linda Drysdale"},{name:"Michael Shannon",role:"Walt Thrombey"},{name:"Don Johnson",role:"Richard Drysdale"}] },
+  ];
+
+  // ======== READ MOVIE FROM URL ========
+  const params = new URLSearchParams(window.location.search);
+  const movieTitle = decodeURIComponent(params.get('title') || '');
+  const movie = MOVIE_DB.find(m => m.title === movieTitle);
+
+  // If movie not found, show error state
+  if (!movie) {
+    document.getElementById('movieTitle').textContent = movieTitle || 'Movie not found';
+    document.getElementById('movieTitle').className = 'movie-title-big';
+    document.getElementById('movieTitle').style = '';
+    document.getElementById('movieSynopsis').textContent = 'Details for this title are not available yet.';
+    document.getElementById('movieSynopsis').className = 'movie-synopsis';
+    document.getElementById('movieTagline').textContent = '';
+    document.getElementById('metaChips').innerHTML = '';
+    document.getElementById('heroActions').innerHTML = `<a href="index.html" class="btn-list-big" style="text-decoration:none;">← Back to Home</a>`;
+    document.getElementById('castGrid').innerHTML = '';
+    document.getElementById('infoList').innerHTML = '<p style="color:#666;font-size:.88rem;">No info available.</p>';
+    document.getElementById('similarGrid').innerHTML = '';
+    document.getElementById('reviewsList').innerHTML = '<div class="empty-reviews">No reviews yet.</div>';
+  }
+
+  // ======== REVIEWS STORAGE ========
+  const REVIEWS_KEY = 'nf_reviews_' + encodeURIComponent(movie.title);
+  function getReviews()   { return JSON.parse(localStorage.getItem(REVIEWS_KEY) || '[]'); }
+  function saveReviews(r) { localStorage.setItem(REVIEWS_KEY, JSON.stringify(r)); }
+
+  // ======== RENDER MOVIE (with brief skeleton delay) ========
+  if (movie) setTimeout(() => renderMovie(), 600);
+
+  function renderMovie() {
+    document.title = `Netflix Clone — ${movie.title}`;
+
+    // Hero bg
+    document.getElementById('heroBg').style.backgroundImage = `url('${movie.poster}')`;
+
+    // Meta chips
+    document.getElementById('metaChips').innerHTML = `
+      <span class="chip chip-year">${movie.year}</span>
+      <span class="chip chip-dur">${movie.duration}</span>
+      ${movie.genres.map(g => `<span class="chip chip-genre">${g}</span>`).join('')}
+      <span class="chip chip-rating">⭐ ${getAvgRating() || 'Unrated'}</span>
+    `;
+
+    // Title + tagline + synopsis
+    const titleEl = document.getElementById('movieTitle');
+    titleEl.className = 'movie-title-big';
+    titleEl.style = '';
+    titleEl.textContent = movie.title;
+
+    const tagEl = document.getElementById('movieTagline');
+    tagEl.className = 'movie-tagline';
+    tagEl.style = '';
+    tagEl.textContent = movie.tagline;
+
+    const synEl = document.getElementById('movieSynopsis');
+    synEl.className = 'movie-synopsis';
+    synEl.style = '';
+    synEl.textContent = movie.synopsis;
+
+    // Hero actions
+    const inList = isInMyList();
+    document.getElementById('heroActions').innerHTML = `
+      <button class="btn-play-big" id="btnPlayHero">▶ Play</button>
+      <button class="btn-list-big" id="btnListHero">${inList ? '✓ In My List' : '+ My List'}</button>
+      <button class="btn-rate-big" id="btnRateHero" title="Rate this">★</button>
+      <button class="btn-rate-big" id="btnShareHero" title="Share" style="font-size:.9rem;">⬆</button>
+    `;
+    document.getElementById('btnPlayHero').addEventListener('click', () => openTrailer(movie.videoId));
+    document.getElementById('btnListHero').addEventListener('click', toggleMyList);
+    document.getElementById('btnRateHero').addEventListener('click', () => {
+      document.querySelector('.rating-section').scrollIntoView({ behavior:'smooth' });
+    });
+    document.getElementById('btnShareHero').addEventListener('click', () => {
+      const url = `${location.origin}${location.pathname.replace(/\/[^/]*$/,'/')  }movie.html?title=${encodeURIComponent(movie.title)}`;
+      if (navigator.share) {
+        navigator.share({ title: movie.title, text: `Watch "${movie.title}"!`, url });
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+          document.getElementById('btnShareHero').textContent = '✓';
+          setTimeout(() => { document.getElementById('btnShareHero').textContent = '⬆'; }, 2000);
+        });
+      }
+    });
+
+    // Cast
+    document.getElementById('castGrid').innerHTML = movie.cast.map(c => `
+      <div class="cast-card">
+        <div class="cast-avatar">${c.name.charAt(0)}</div>
+        <div class="cast-name">${c.name}</div>
+        <div class="cast-role">${c.role}</div>
+      </div>
+    `).join('');
+
+    // Info sidebar
+    document.getElementById('infoList').innerHTML = `
+      <div class="info-item"><label>Director</label><span>${movie.director}</span></div>
+      <div class="info-item"><label>Release Year</label><span>${movie.year}</span></div>
+      <div class="info-item"><label>Duration</label><span>${movie.duration}</span></div>
+      <div class="info-item"><label>Genres</label><div class="genre-tags">${movie.genres.map(g=>`<span class="genre-tag">${g}</span>`).join('')}</div></div>
+    `;
+
+    // Avg rating
+    refreshAvgRating();
+
+    // Restore user's existing rating if any
+    const myReview = getReviews().find(r => r.email === session.email && r.profileId === getActiveProfileId());
+    if (myReview) {
+      setStars(myReview.rating);
+      document.getElementById('reviewText').value = myReview.text || '';
+      document.getElementById('yourRatingLabel').textContent = 'Your Rating (edit to update)';
+      document.getElementById('btnSubmitReview').disabled = false;
+      document.getElementById('btnSubmitReview').textContent = 'Update Review';
+    }
+
+    // Similar movies
+    renderSimilar();
+    renderReviews();
+  }
+
+  // ======== MY LIST ========
+  function isInMyList() {
+    const key = profileKey('nf_mylist');
+    const list = JSON.parse(localStorage.getItem(key) || '[]');
+    return list.some(m => m.title === movie.title);
+  }
+  function toggleMyList() {
+    const key = profileKey('nf_mylist');
+    let list = JSON.parse(localStorage.getItem(key) || '[]');
+    if (isInMyList()) {
+      list = list.filter(m => m.title !== movie.title);
+    } else {
+      list.push({ title: movie.title, poster: movie.poster, videoId: movie.videoId });
+    }
+    localStorage.setItem(key, JSON.stringify(list));
+    document.getElementById('btnListHero').textContent = isInMyList() ? '✓ In My List' : '+ My List';
+  }
+
+  // ======== STAR RATING ========
+  let selectedRating = 0;
+  const starBtns = document.querySelectorAll('.star-btn');
+
+  function setStars(val) {
+    selectedRating = val;
+    starBtns.forEach(b => b.classList.toggle('active', parseInt(b.dataset.val) <= val));
+    document.getElementById('btnSubmitReview').disabled = val === 0;
+  }
+
+  starBtns.forEach(btn => {
+    btn.addEventListener('mouseenter', () => {
+      starBtns.forEach(b => b.classList.toggle('active', parseInt(b.dataset.val) <= parseInt(btn.dataset.val)));
+    });
+    btn.addEventListener('mouseleave', () => setStars(selectedRating));
+    btn.addEventListener('click', () => setStars(parseInt(btn.dataset.val)));
+  });
+
+  // ======== SUBMIT REVIEW ========
+  document.getElementById('btnSubmitReview').addEventListener('click', () => {
+    if (!selectedRating) return;
+    const text     = document.getElementById('reviewText').value.trim();
+    const reviews  = getReviews().filter(r => !(r.email === session.email && r.profileId === getActiveProfileId()));
+    const profName = session.activeProfile || session.name;
+    const profColor = session.activeProfileColor || '#e50914';
+    reviews.unshift({
+      email: session.email,
+      profileId: getActiveProfileId(),
+      profileName: profName,
+      profileColor: profColor,
+      rating: selectedRating,
+      text,
+      date: new Date().toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}),
+    });
+    saveReviews(reviews);
+    refreshAvgRating();
+    renderReviews();
+    // Update meta chip
+    document.getElementById('metaChips').querySelector('.chip-rating').textContent = '⭐ ' + getAvgRating();
+    const toast = document.getElementById('reviewToast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+    document.getElementById('btnSubmitReview').textContent = 'Update Review';
+    document.getElementById('yourRatingLabel').textContent = 'Your Rating (edit to update)';
+  });
+
+  // ======== AVG RATING ========
+  function getAvgRating() {
+    const reviews = getReviews();
+    if (!reviews.length) return null;
+    const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+    return avg.toFixed(1);
+  }
+  function refreshAvgRating() {
+    const reviews = getReviews();
+    const avg = getAvgRating();
+    const filled = avg ? Math.round(parseFloat(avg)) : 0;
+    document.getElementById('avgStars').textContent = '★'.repeat(filled) + '☆'.repeat(5 - filled);
+    document.getElementById('avgNum').textContent   = avg ? avg + ' / 5' : '—';
+    document.getElementById('avgCount').textContent = reviews.length ? `${reviews.length} review${reviews.length>1?'s':''}` : 'No ratings yet';
+  }
+
+  // ======== RENDER REVIEWS ========
+  function renderReviews() {
+    const reviews = getReviews();
+    const list = document.getElementById('reviewsList');
+    if (!reviews.length) {
+      list.innerHTML = '<div class="empty-reviews">No reviews yet. Be the first to rate this!</div>';
+      return;
+    }
+    list.innerHTML = reviews.map(r => `
+      <div class="review-item">
+        <div class="review-header">
+          <div class="review-avatar" style="background:${r.profileColor||'#e50914'}">${(r.profileName||'U').charAt(0).toUpperCase()}</div>
+          <div>
+            <div class="review-name">${r.profileName || 'User'} <span class="review-profile-tag">${r.profileId === getActiveProfileId() && r.email === session.email ? 'You' : ''}</span></div>
+            <div class="review-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+          </div>
+          <div class="review-date">${r.date}</div>
+        </div>
+        ${r.text ? `<div class="review-text">"${r.text}"</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  // ======== SIMILAR MOVIES ========
+  function renderSimilar() {
+    const similar = MOVIE_DB.filter(m =>
+      m.title !== movie.title &&
+      m.genres.some(g => movie.genres.includes(g))
+    ).slice(0, 8);
+
+    document.getElementById('similarGrid').innerHTML = similar.map(m => `
+      <div class="similar-card" onclick="window.location.href='movie.html?title=${encodeURIComponent(m.title)}'">
+        <img src="${m.poster}" alt="${m.title}" loading="lazy" onerror="this.style.background='#333'"/>
+        <div class="similar-card-info"><span>${m.title}</span></div>
+      </div>
+    `).join('');
+  }
+
+  // ======== TRAILER ========
+  function openTrailer(videoId) {
+    document.getElementById('trailerFrame').src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+    document.getElementById('trailerModal').classList.remove('hidden');
+    // Save to watch history
+    if (session) {
+      const key = profileKey('nf_history');
+      let history = JSON.parse(localStorage.getItem(key) || '[]');
+      history = history.filter(h => h.title !== movie.title);
+      history.unshift({ title:movie.title, poster:movie.poster, progress:Math.floor(Math.random()*60)+20, watchedOn:'Just now', watchedAt:new Date().toISOString() });
+      localStorage.setItem(key, JSON.stringify(history.slice(0,10)));
+    }
+  }
+  document.getElementById('closeModal').addEventListener('click', () => {
+    document.getElementById('trailerFrame').src = '';
+    document.getElementById('trailerModal').classList.add('hidden');
+  });
+  document.getElementById('trailerModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('trailerModal')) {
+      document.getElementById('trailerFrame').src = '';
+      document.getElementById('trailerModal').classList.add('hidden');
+    }
+  });
+
+  // ======== CONTINUATION PREDICTOR ========
+  const CONTINUATIONS = {
+    "Avengers: Endgame": [
+      { hint:"snapped|infinity|gauntlet|thanos defeated|stones", text:"⚡ After the snap, all the dusted heroes return — portals open across the battlefield. The Avengers face Thanos's full army in an epic last stand. Tony makes the ultimate sacrifice to save the universe. The cost is everything." },
+      { hint:"time heist|time travel|quantum|past", text:"🕰️ The team splits up to retrieve the stones from different points in time. Things go wrong — Loki escapes, Thanos learns of the plan, and the team must improvise. The real battle hasn't even started yet." },
+      { hint:"beginning|start|intro|five years", text:"🌍 Five years after the snap, the surviving heroes are scattered and broken. Tony has retired. Steve leads a support group. Thor has let himself go. Then Scott Lang returns from the Quantum Realm with a plan that could reverse everything." },
+    ],
+    "Inception": [
+      { hint:"level 2|dream 2|hotel|arthur|gravity", text:"🏨 You're in level 2 — the Hotel. Arthur must fight in zero gravity while keeping the dreamers stable. Below, the team goes deeper into Fischer's subconscious. The clock is ticking — time moves 20x faster down here." },
+      { hint:"level 3|snow|fortress|yusuf", text:"❄️ Level 3 — the Snow Fortress. This is where the real inception happens. Eames plants the idea, but Fischer's militarized subconscious fights back. Cobb's past threatens to destroy everything. They need to go even deeper." },
+      { hint:"limbo|cobb|mal|deeper", text:"🌀 Cobb falls into Limbo — unstructured dream space where years pass in seconds. He must find Fischer and get both of them out before they forget the real world entirely. And Mal is waiting for him there." },
+    ],
+    "The Dark Knight": [
+      { hint:"joker|hospital|harvey|two face", text:"🃏 The Joker blows up the hospital after turning Harvey Dent — Gotham's white knight — into Two-Face. Now Batman faces two threats: the Joker's chaos AND Harvey's twisted justice targeting those he blames for Rachel's death." },
+      { hint:"ferry|choice|boats|people", text:"⚡ The Joker has rigged two ferries — one with civilians, one with criminals — each holding the other's detonator. Batman races to stop both while the Joker watches to prove people will always choose themselves over others. The climax is near." },
+      { hint:"bat signal|end|unmasked|blame", text:"🦇 Batman defeats the Joker but Harvey has already caused too much damage. To preserve Dent's legacy, Batman takes the blame for Harvey's murders. Gordon destroys the Bat-Signal. Batman becomes the villain Gotham needs him to be — for now." },
+    ],
+    "The Matrix": [
+      { hint:"oracle|choice|red pill|follow white rabbit", text:"🔴 Neo is about to meet the Oracle — who will tell him something unexpected about being 'The One.' But this scene plants a deeper truth: choice vs. destiny. Everything Neo believes is about to be challenged before the real fight begins." },
+      { hint:"agent smith|training|sparring|morpheus", text:"👊 Neo's training is accelerating. The sparring match with Morpheus is about to prove that the rules of the Matrix can be bent — and that Neo's mind is starting to believe. This is the turning point before the real infiltration." },
+      { hint:"captured|tank|betrayal|cypher", text:"😱 Cypher has betrayed the crew to Agent Smith. Morpheus is captured and being interrogated for the Zion access codes. The crew are being killed one by one on the ship. Neo and Trinity must make a choice that seems impossible." },
+    ],
+  };
+
+  document.getElementById('btnPredict').addEventListener('click', () => {
+    const input = document.getElementById('continuationInput').value.trim();
+    const result = document.getElementById('continuationResult');
+    if (!input) { result.style.display = 'block'; result.innerHTML = '<em style="color:#888;">Please describe where you stopped in the movie.</em>'; return; }
+
+    const btn = document.getElementById('btnPredict');
+    btn.textContent = '⏳ Predicting…'; btn.disabled = true;
+
+    setTimeout(() => {
+      btn.textContent = '🔮 Predict What Happens Next'; btn.disabled = false;
+
+      const movieConts = CONTINUATIONS[movie?.title];
+      let prediction = null;
+
+      if (movieConts) {
+        const q = input.toLowerCase();
+        prediction = movieConts.find(c => c.hint.split('|').some(h => q.includes(h)));
+        if (!prediction) prediction = movieConts[Math.floor(Math.random() * movieConts.length)];
+      }
+
+      if (prediction) {
+        result.style.display = 'block';
+        result.innerHTML = `
+          <div style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#e50914;margin-bottom:10px;">🔮 AI Prediction</div>
+          <div>${prediction.text}</div>
+          <div style="margin-top:12px;font-size:.75rem;color:#555;font-style:italic;">⚠️ This is an AI-generated prediction. Some details may differ from the actual film.</div>
+        `;
+      } else {
+        result.style.display = 'block';
+        result.innerHTML = generateGenericContinuation(movie?.title, input);
+      }
+    }, 1200);
+  });
+
+  function generateGenericContinuation(title, userInput) {
+    return `
+      <div style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#e50914;margin-bottom:10px;">🔮 AI Prediction for "${title}"</div>
+      <div style="color:#ddd;line-height:1.7;">
+        Based on where you described stopping, the story is building toward a major confrontation. 
+        The character you last saw is about to face their biggest challenge — one that will test everything they believe. 
+        Expect a twist that reframes earlier scenes, a sacrifice that changes the stakes, and a resolution that's both surprising and inevitable.
+        The tension you're feeling right now? It only gets more intense from here. 🎬
+      </div>
+      <div style="margin-top:12px;font-size:.75rem;color:#555;font-style:italic;">⚠️ AI-generated prediction based on story patterns.</div>
+    `;
+  }
+
+  // ======== SCENE FINDER ========
+  const SCENE_DB = [
+    { title:"Inception",         keywords:["rotating","hallway","corridor","zero gravity","floating","hotel","arthur","fight","spinning"], desc:"The famous zero-gravity hallway fight scene — Arthur fighting henchmen while the hallway rotates in a Paris dream level. One of the most technically complex scenes in film history." },
+    { title:"The Dark Knight",   keywords:["pencil","magic trick","table","joker","boardroom","mob","disappear"], desc:"The Joker's pencil disappearing trick — in the mob meeting. 'And now it's gone.' A chilling introduction to the character." },
+    { title:"The Matrix",        keywords:["bullet","slow motion","dodge","bend","roof","agent","time stop","time slow"], desc:"Neo dodging bullets on the rooftop — the first 'bullet time' sequence that became one of cinema's most iconic effects." },
+    { title:"Interstellar",      keywords:["waves","huge","tidal","ocean","water","planet","giant wave","miller"], desc:"The water planet with the massive tidal waves — Miller's Planet. A single hour there equals 7 years on Earth. The scale of the waves is terrifying." },
+    { title:"Avengers: Endgame", keywords:["portals","all heroes","return","snap","battle","assembled","portal open","arrive"], desc:"The 'Avengers Assemble' portal scene — all the dusted heroes return through Doctor Strange's portals to face Thanos's army. One of cinema's greatest assembled moments." },
+    { title:"Joker",             keywords:["stairs","dance","dance","suit","orange","music","bathroom","staircase","celebration"], desc:"Arthur's transformation dance on the stairs in his Joker suit — a euphoric, unsettling moment where he fully embraces his new identity." },
+    { title:"Forrest Gump",      keywords:["running","run","across america","cross country","beard","long hair","followers","why am i running"], desc:"Forrest running across America — the scene where he just keeps going for years, followed by a crowd, then suddenly stops and says 'I'm pretty tired. I think I'll go home now.'" },
+    { title:"The Shawshank Redemption", keywords:["rain","arms out","spread","sewage","escape","pipe","freedom","thunder"], desc:"Andy Dufresne escaping through the sewage pipe and raising his arms in the rain — one of the most iconic freedom moments in cinema." },
+    { title:"Mad Max: Fury Road", keywords:["guitar","fire","flame","musician","truck","war","music","chrome","shiny"], desc:"The Doof Warrior — a blind guitarist strapped to a giant speaker truck, playing flaming guitar during the chase. Pure cinematic insanity." },
+    { title:"Knives Out",        keywords:["donut","hole","blanc","clue","metaphor","detective","center","middle"], desc:"Benoit Blanc's donut metaphor — 'The hole in the centre of my donut theory is that all the evidence points to you.' One of the cleverest detective monologues in recent film." },
+  ];
+
+  document.getElementById('btnFindScene').addEventListener('click', () => {
+    const input = document.getElementById('sceneInput').value.trim();
+    const result = document.getElementById('sceneResult');
+    if (!input) { result.style.display = 'block'; result.innerHTML = '<em style="color:#888;font-size:.85rem;">Please describe the scene you\'re thinking of.</em>'; return; }
+
+    const btn = document.getElementById('btnFindScene');
+    btn.textContent = '🔍 Searching…'; btn.disabled = true;
+
+    setTimeout(() => {
+      btn.textContent = '🎯 Find This Scene'; btn.disabled = false;
+
+      const q = input.toLowerCase();
+      const scored = SCENE_DB.map(s => ({
+        ...s,
+        score: s.keywords.filter(k => q.includes(k) || k.split('').filter(c => q.includes(c)).length > k.length * 0.6).length
+      })).sort((a,b) => b.score - a.score);
+
+      const best = scored[0];
+      const movie2 = MOVIES.find(m => m.title === best?.title);
+
+      if (best && best.score > 0) {
+        result.style.display = 'block';
+        result.innerHTML = `
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:18px 20px;display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+            ${movie2 ? `<img src="${movie2.poster}" style="width:72px;aspect-ratio:2/3;object-fit:cover;border-radius:6px;flex-shrink:0;background:#222;" onerror="this.style.background='#333'"/>` : ''}
+            <div style="flex:1;min-width:160px;">
+              <div style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#e50914;margin-bottom:6px;">🎯 Scene Identified</div>
+              <div style="font-size:1rem;font-weight:600;margin-bottom:6px;color:#fff;">${best.title}</div>
+              <div style="font-size:.86rem;color:#bbb;line-height:1.6;margin-bottom:12px;">${best.desc}</div>
+              <a href="movie.html?title=${encodeURIComponent(best.title)}" style="display:inline-block;padding:8px 18px;background:#e50914;color:#fff;border-radius:6px;font-size:.82rem;font-weight:600;text-decoration:none;">View Movie →</a>
+            </div>
+          </div>
+        `;
+      } else {
+        result.style.display = 'block';
+        result.innerHTML = `
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:18px 20px;">
+            <div style="font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#666;margin-bottom:8px;">🔍 Scene Search</div>
+            <div style="font-size:.88rem;color:#888;line-height:1.6;">
+              Hmm, I couldn't pinpoint the exact scene from your description. Try adding more specific details like character names, what they're wearing, or what happens just before or after the scene you remember.
+            </div>
+            <div style="margin-top:10px;font-size:.75rem;color:#555;">
+              💡 Tip: Include visual details like colors, locations, or actions — e.g. "man in black suit on a rooftop" or "woman runs through rain".
+            </div>
+          </div>
+        `;
+      }
+    }, 1000);
+  });
+
+  // ======== WATCH PARTY BUTTON ========
+  document.getElementById('btnStartParty').addEventListener('click', () => {
+    window.location.href = `watchparty.html?movie=${encodeURIComponent(movie?.title || '')}`;
+  });
+
+  // ======== DROPDOWN / LOGOUT ========
+  const avatarBtn = document.getElementById('avatarBtn');
+  const dropdown  = document.getElementById('userDropdown');
+  avatarBtn.addEventListener('click', e => { e.stopPropagation(); dropdown.classList.toggle('open'); });
+  document.addEventListener('click', () => dropdown.classList.remove('open'));
+  dropdown.addEventListener('click', e => e.stopPropagation());
+  document.getElementById('logoutBtn').addEventListener('click', e => {
+    e.preventDefault();
+    localStorage.removeItem('nf_session'); sessionStorage.removeItem('nf_session');
+    window.location.href = 'auth.html';
+  });
+  </script>
+</body>
+</html>

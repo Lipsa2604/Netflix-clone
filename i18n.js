@@ -490,11 +490,14 @@ const TRANSLATIONS = {
 // ============================================================
 
 function getLang() {
-  // 1. Per-user setting, 2. global fallback, 3. English
+  // 1. Per-profile setting, 2. global fallback, 3. English
   try {
     const session = JSON.parse(localStorage.getItem('nf_session') || sessionStorage.getItem('nf_session') || 'null');
     if (session) {
-      const key = 'nf_settings_' + session.email;
+      // Use profileKey if available (profile-key.js loaded first), else fall back
+      const key = (typeof profileKey === 'function')
+        ? profileKey('nf_settings')
+        : ('nf_settings__' + session.email);
       const s = JSON.parse(localStorage.getItem(key) || '{}');
       if (s.langDisplay && TRANSLATIONS[s.langDisplay]) return s.langDisplay;
     }

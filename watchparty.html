@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Netflix Clone — Watch Party</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .wp-layout { max-width:1200px; margin:0 auto; padding:32px 24px 60px; animation:fadeUp .4s ease both; }
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+    .page-title { font-family:'Bebas Neue',cursive; font-size:2rem; letter-spacing:3px; color:#fff; margin-bottom:6px; display:flex; align-items:center; gap:12px; }
+    .page-title::before { content:''; display:block; width:4px; height:28px; background:#e50914; border-radius:2px; }
+    .page-subtitle { font-size:.85rem; color:#666; margin-bottom:28px; }
+
+    /* LOBBY / ROOM SELECT */
+    .lobby { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:32px; }
+    @media(max-width:640px){ .lobby{grid-template-columns:1fr} }
+
+    .lobby-card {
+      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+      border-radius:12px; padding:24px; transition:border-color .2s;
+    }
+    .lobby-card:hover { border-color:rgba(255,255,255,.15); }
+    .lobby-card h3 { font-size:1rem; font-weight:600; margin:0 0 6px; }
+    .lobby-card p  { font-size:.82rem; color:#666; margin:0 0 18px; line-height:1.5; }
+
+    .field label { display:block; font-size:.68rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#666; margin-bottom:6px; }
+    .field input, .field select {
+      width:100%; padding:11px 14px;
+      background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.09);
+      border-radius:7px; color:#fff; font-family:'DM Sans',sans-serif; font-size:.9rem;
+      outline:none; transition:border-color .2s; margin-bottom:10px;
+    }
+    .field input:focus, .field select:focus { border-color:rgba(229,9,20,.5); }
+    .field input::placeholder { color:#444; }
+    .field select option { background:#1a1a1a; }
+
+    .btn-red { padding:11px 24px; background:#e50914; color:#fff; border:none; border-radius:7px; font-family:'DM Sans',sans-serif; font-size:.9rem; font-weight:600; cursor:pointer; width:100%; transition:background .2s; }
+    .btn-red:hover { background:#c1060f; }
+    .btn-ghost { padding:11px 24px; background:rgba(255,255,255,.07); color:#ccc; border:1px solid rgba(255,255,255,.12); border-radius:7px; font-family:'DM Sans',sans-serif; font-size:.9rem; cursor:pointer; width:100%; transition:background .2s; }
+    .btn-ghost:hover { background:rgba(255,255,255,.12); }
+
+    /* PARTY ROOM */
+    .party-room { display:none; }
+    .party-room.active { display:block; animation:fadeUp .35s ease both; }
+
+    /* Room header */
+    .room-header {
+      display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
+      border-radius:10px; padding:14px 20px; margin-bottom:20px;
+    }
+    .room-id-badge {
+      display:inline-flex; align-items:center; gap:8px;
+      background:rgba(229,9,20,.1); border:1px solid rgba(229,9,20,.25);
+      border-radius:8px; padding:6px 14px; font-size:.8rem; color:#e50914; font-weight:600;
+    }
+    .room-id-badge span { color:#fff; letter-spacing:.08em; font-family:monospace; }
+    .copy-btn { background:none; border:none; color:#e50914; cursor:pointer; font-size:.75rem; font-weight:700; padding:0 4px; }
+    .copy-btn:hover { color:#fff; }
+    .members-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .member-chip { display:flex; align-items:center; gap:6px; background:rgba(255,255,255,.06); border-radius:20px; padding:4px 12px; font-size:.78rem; color:#ccc; }
+    .member-dot { width:8px; height:8px; border-radius:50%; background:#22c55e; flex-shrink:0; }
+    .member-dot.offline { background:#555; }
+
+    /* MAIN PARTY GRID */
+    .party-grid { display:grid; grid-template-columns:1fr 340px; gap:20px; }
+    @media(max-width:900px){ .party-grid{grid-template-columns:1fr} }
+
+    /* VIDEO PLAYER */
+    .player-wrap {
+      position:relative; background:#000; border-radius:12px; overflow:hidden;
+      aspect-ratio:16/9; margin-bottom:12px;
+    }
+    .player-wrap iframe { position:absolute; inset:0; width:100%; height:100%; border:none; }
+    .player-placeholder {
+      position:absolute; inset:0; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:12px; color:#555;
+    }
+    .player-placeholder span { font-size:3rem; }
+    .player-controls { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .ctrl-btn {
+      padding:8px 16px; border-radius:7px; font-family:'DM Sans',sans-serif; font-size:.82rem;
+      font-weight:600; cursor:pointer; transition:all .15s; border:none;
+      display:flex; align-items:center; gap:5px;
+    }
+    .ctrl-play   { background:#e50914; color:#fff; }
+    .ctrl-play:hover { background:#c1060f; }
+    .ctrl-sync   { background:rgba(34,197,94,.15); color:#4ade80; border:1px solid rgba(34,197,94,.3); }
+    .ctrl-sync:hover { background:rgba(34,197,94,.25); }
+    .ctrl-pick   { background:rgba(255,255,255,.08); color:#ccc; border:1px solid rgba(255,255,255,.12); }
+    .ctrl-pick:hover { background:rgba(255,255,255,.15); }
+
+    /* Movie picker dropdown */
+    .movie-picker { display:none; background:rgba(20,20,20,.98); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:12px; margin-top:10px; max-height:280px; overflow-y:auto; }
+    .movie-picker.open { display:block; animation:fadeUp .2s ease; }
+    .movie-pick-item { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:7px; cursor:pointer; transition:background .15s; }
+    .movie-pick-item:hover { background:rgba(255,255,255,.07); }
+    .movie-pick-item img { width:36px; height:54px; object-fit:cover; border-radius:4px; flex-shrink:0; background:#222; }
+    .movie-pick-item span { font-size:.84rem; color:#ccc; }
+
+    /* SYNC STATUS */
+    .sync-bar {
+      display:flex; align-items:center; gap:10px; padding:8px 14px;
+      background:rgba(34,197,94,.08); border:1px solid rgba(34,197,94,.2);
+      border-radius:7px; font-size:.78rem; color:#4ade80; margin-bottom:12px;
+    }
+    .sync-dot { width:7px; height:7px; border-radius:50%; background:#22c55e; animation:syncPulse 1.5s ease infinite; flex-shrink:0; }
+    @keyframes syncPulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+    /* CHAT + AI PANEL */
+    .chat-panel {
+      display:flex; flex-direction:column; height:600px;
+      background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07);
+      border-radius:12px; overflow:hidden;
+    }
+    .chat-header { padding:14px 18px; border-bottom:1px solid rgba(255,255,255,.07); display:flex; align-items:center; gap:10px; }
+    .chat-header-title { font-size:.9rem; font-weight:600; }
+    .ai-badge { background:linear-gradient(135deg,#e50914,#ff6b35); color:#fff; border-radius:4px; padding:2px 7px; font-size:.62rem; font-weight:700; letter-spacing:.06em; }
+    .chat-tabs { display:flex; border-bottom:1px solid rgba(255,255,255,.06); }
+    .chat-tab { flex:1; padding:8px; text-align:center; font-size:.78rem; color:#666; cursor:pointer; transition:color .15s; border:none; background:none; }
+    .chat-tab.active { color:#fff; border-bottom:2px solid #e50914; margin-bottom:-1px; }
+
+    .chat-messages { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; }
+    .chat-messages::-webkit-scrollbar { width:4px; }
+    .chat-messages::-webkit-scrollbar-track { background:transparent; }
+    .chat-messages::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1); border-radius:2px; }
+
+    .msg { display:flex; flex-direction:column; gap:3px; animation:fadeIn .2s ease; }
+    @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+    .msg.mine { align-items:flex-end; }
+    .msg.ai   { align-items:flex-start; }
+    .msg-name { font-size:.65rem; color:#666; padding:0 10px; }
+    .msg-bubble {
+      max-width:85%; padding:9px 13px; border-radius:12px;
+      font-size:.84rem; line-height:1.5; word-break:break-word;
+    }
+    .msg.mine .msg-bubble   { background:#e50914; color:#fff; border-radius:12px 12px 4px 12px; }
+    .msg.other .msg-bubble  { background:rgba(255,255,255,.09); color:#ddd; border-radius:12px 12px 12px 4px; }
+    .msg.ai .msg-bubble     { background:linear-gradient(135deg,rgba(229,9,20,.15),rgba(255,107,53,.1)); border:1px solid rgba(229,9,20,.2); color:#fff; border-radius:12px 12px 12px 4px; }
+    .msg.system .msg-bubble { background:rgba(255,255,255,.04); color:#666; font-size:.75rem; text-align:center; border-radius:8px; width:100%; max-width:100%; }
+
+    .chat-input-wrap { padding:12px; border-top:1px solid rgba(255,255,255,.07); display:flex; gap:8px; }
+    .chat-input {
+      flex:1; padding:10px 14px; background:rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.1); border-radius:8px; color:#fff;
+      font-family:'DM Sans',sans-serif; font-size:.88rem; outline:none; resize:none; height:40px;
+      transition:border-color .2s;
+    }
+    .chat-input:focus { border-color:rgba(229,9,20,.4); }
+    .chat-input::placeholder { color:#444; }
+    .send-btn { padding:0 16px; background:#e50914; border:none; border-radius:8px; color:#fff; cursor:pointer; font-size:1rem; transition:background .15s; flex-shrink:0; }
+    .send-btn:hover { background:#c1060f; }
+    .ai-ask-btn { padding:0 12px; background:rgba(229,9,20,.15); border:1px solid rgba(229,9,20,.3); border-radius:8px; color:#e50914; cursor:pointer; font-size:.72rem; font-weight:700; transition:background .15s; flex-shrink:0; white-space:nowrap; }
+    .ai-ask-btn:hover { background:rgba(229,9,20,.25); }
+
+    /* AI typing indicator */
+    .ai-typing { display:none; align-items:center; gap:6px; padding:0 4px; }
+    .ai-typing.show { display:flex; }
+    .ai-typing span { font-size:.75rem; color:#888; }
+    .typing-dots { display:flex; gap:3px; }
+    .typing-dot { width:5px; height:5px; border-radius:50%; background:#e50914; animation:typingDot 1.2s ease infinite; }
+    .typing-dot:nth-child(2){animation-delay:.2s}.typing-dot:nth-child(3){animation-delay:.4s}
+    @keyframes typingDot{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+
+    /* AI QUICK PROMPTS */
+    .ai-prompts { padding:10px 14px; border-top:1px solid rgba(255,255,255,.05); display:flex; gap:6px; flex-wrap:wrap; }
+    .ai-prompt-chip {
+      padding:4px 10px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+      border-radius:20px; font-size:.7rem; color:#aaa; cursor:pointer; transition:all .15s; white-space:nowrap;
+    }
+    .ai-prompt-chip:hover { background:rgba(229,9,20,.1); border-color:rgba(229,9,20,.3); color:#fff; }
+
+    .hidden{display:none!important}
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <a href="index.html" class="logo" style="text-decoration:none;">NETFLIX</a>
+    <nav class="nav-desktop">
+      <a href="index.html">Home</a>
+      <a href="search.html">🔍 AI Search</a>
+      <a href="mood.html">😊 Mood</a>
+      <a href="mylist.html">My List</a>
+      <a href="settings.html">Settings</a>
+    </nav>
+    <div class="nav-actions">
+      <div class="user-menu">
+        <div class="avatar" id="avatarBtn">U</div>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="dropdown-name">Signed in as<strong id="dropdownName">User</strong></div>
+          <a href="profile.html"  class="dropdown-item">My Profile</a>
+          <a href="settings.html" class="dropdown-item">Account Settings</a>
+          <a href="mylist.html"   class="dropdown-item">My List</a>
+          <a href="#" class="dropdown-item logout" id="logoutBtn">Sign Out</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="wp-layout">
+    <div class="page-title">🎬 Watch Party</div>
+    <p class="page-subtitle">Watch movies in sync with friends + chat with an AI movie companion.</p>
+
+    <!-- LOBBY -->
+    <div class="lobby" id="lobby">
+      <div class="lobby-card">
+        <h3>🎉 Create a Room</h3>
+        <p>Start a new watch party. Share the room code with friends so they can join.</p>
+        <div class="field"><label>Your Name</label><input type="text" id="hostName" placeholder="e.g. Lipsa"/></div>
+        <div class="field"><label>Pick a Movie</label>
+          <select id="hostMovie">
+            <option value="">— Choose a movie —</option>
+            <option value="hA6hldpSTF8|Avengers: Endgame">Avengers: Endgame</option>
+            <option value="EXeTwQWrcwY|The Dark Knight">The Dark Knight</option>
+            <option value="zSWdZVtXT7E|Interstellar">Interstellar</option>
+            <option value="YoHD9XEInc0|Inception">Inception</option>
+            <option value="JfVOs4VSpmA|Spider-Man: No Way Home">Spider-Man: No Way Home</option>
+            <option value="m8e-FF8MsqU|The Matrix">The Matrix</option>
+            <option value="zAGVQLHvwOY|Joker">Joker</option>
+            <option value="bLvqoHBptjg|Forrest Gump">Forrest Gump</option>
+            <option value="6hB3S9bIaco|The Shawshank Redemption">The Shawshank Redemption</option>
+            <option value="2AUmvWm5ZDQ|John Wick">John Wick</option>
+            <option value="hEJnMQG9ev8|Mad Max: Fury Road">Mad Max: Fury Road</option>
+            <option value="qGqiHJTsRkQ|Knives Out">Knives Out</option>
+          </select>
+        </div>
+        <button class="btn-red" id="btnCreate">Create Room</button>
+      </div>
+      <div class="lobby-card">
+        <h3>🚪 Join a Room</h3>
+        <p>Got a room code from a friend? Enter it below to join their watch party.</p>
+        <div class="field"><label>Your Name</label><input type="text" id="guestName" placeholder="e.g. Riya"/></div>
+        <div class="field"><label>Room Code</label><input type="text" id="roomCodeInput" placeholder="e.g. MOVIE-4829" style="text-transform:uppercase;letter-spacing:.1em;"/></div>
+        <button class="btn-ghost" id="btnJoin">Join Room</button>
+      </div>
+    </div>
+
+    <!-- PARTY ROOM -->
+    <div class="party-room" id="partyRoom">
+
+      <!-- Room Header -->
+      <div class="room-header">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <div class="room-id-badge">Room: <span id="roomCodeDisplay">—</span>
+            <button class="copy-btn" id="copyRoomBtn" title="Copy code">📋</button>
+          </div>
+          <div id="nowPlayingBadge" style="font-size:.8rem;color:#aaa;"></div>
+        </div>
+        <div class="members-row" id="membersRow"></div>
+        <button class="btn-ghost" id="btnLeave" style="width:auto;padding:8px 16px;font-size:.8rem;">Leave</button>
+      </div>
+
+      <div class="party-grid">
+        <!-- LEFT: Player -->
+        <div class="player-section">
+          <div class="sync-bar" id="syncBar">
+            <div class="sync-dot"></div>
+            Synced with all members · watching together
+          </div>
+          <div class="player-wrap" id="playerWrap">
+            <div class="player-placeholder" id="playerPlaceholder">
+              <span>🎬</span>
+              <p style="font-size:.85rem;margin:0;">Pick a movie to start watching</p>
+            </div>
+            <iframe id="playerIframe" style="display:none;" allowfullscreen
+              allow="autoplay; encrypted-media"></iframe>
+          </div>
+          <div class="player-controls">
+            <button class="ctrl-btn ctrl-play" id="btnTogglePlay">▶ Play</button>
+            <button class="ctrl-btn ctrl-sync" id="btnSyncAll">⟳ Sync All</button>
+            <button class="ctrl-btn ctrl-pick" id="btnPickMovie">🎬 Change Movie</button>
+          </div>
+          <div class="movie-picker" id="moviePicker">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- RIGHT: Chat + AI -->
+        <div>
+          <div class="chat-panel">
+            <div class="chat-header">
+              <span style="font-size:1.1rem;">💬</span>
+              <span class="chat-header-title">Party Chat</span>
+              <span class="ai-badge">+ AI</span>
+            </div>
+            <div class="chat-tabs">
+              <button class="chat-tab active" data-tab="chat">Chat</button>
+              <button class="chat-tab" data-tab="ai">Ask AI 🤖</button>
+            </div>
+
+            <div class="chat-messages" id="chatMessages"></div>
+
+            <div class="ai-typing" id="aiTyping">
+              <div class="typing-dots">
+                <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+              </div>
+              <span>AI is thinking…</span>
+            </div>
+
+            <!-- AI quick prompts (shown on AI tab) -->
+            <div class="ai-prompts hidden" id="aiPrompts">
+              <div class="ai-prompt-chip" data-q="What's happening in this movie?">What's happening?</div>
+              <div class="ai-prompt-chip" data-q="Who are the main characters?">Main characters?</div>
+              <div class="ai-prompt-chip" data-q="What should I watch next after this?">Watch next?</div>
+              <div class="ai-prompt-chip" data-q="Give me a fun fact about this movie">Fun fact!</div>
+              <div class="ai-prompt-chip" data-q="What are the best quotes from this movie?">Best quotes?</div>
+            </div>
+
+            <div class="chat-input-wrap">
+              <textarea class="chat-input" id="chatInput" placeholder="Message…" rows="1"></textarea>
+              <button class="ai-ask-btn hidden" id="aiAskBtn" title="Ask AI">🤖 Ask</button>
+              <button class="send-btn" id="sendBtn">➤</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /party-room -->
+  </div>
+
+  <script src="profile-key.js"></script>
+  <script src="i18n.js"></script>
+
+  <!-- Firebase Realtime Database (free, no backend needed) -->
+  <script type="module">
+  import { initializeApp }          from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getDatabase, ref, set, push, onValue, onDisconnect, remove, get, update }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+  // ================================================================
+  //  FIREBASE CONFIG
+  //  👉 Replace with YOUR own Firebase project config.
+  //  Steps:
+  //   1. Go to https://console.firebase.google.com
+  //   2. Create a project → Add Web App → copy the config below
+  //   3. Go to Realtime Database → Create Database → Start in test mode
+  // ================================================================
+  const FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyBuceVW8SH81Wq_uPZAW0wl3vtRSYqjMVk",
+    authDomain:        "netflix-clone-e2fe0.firebaseapp.com",
+    databaseURL:       "https://netflix-clone-e2fe0-default-rtdb.firebaseio.com",
+    projectId:         "netflix-clone-e2fe0",
+    storageBucket:     "netflix-clone-e2fe0.firebasestorage.app",
+    messagingSenderId: "281303712340",
+    appId:             "1:281303712340:web:a9e187676a4349f68e63c1",
+    measurementId:     "G-T6LK834LCM"
+  };
+
+  // ================================================================
+  //  Check if Firebase is configured
+  // ================================================================
+  const FIREBASE_READY = FIREBASE_CONFIG.apiKey !== 'YOUR_API_KEY';
+
+  let db = null;
+  if (FIREBASE_READY) {
+    const app = initializeApp(FIREBASE_CONFIG);
+    db = getDatabase(app);
+  } else {
+    // Show setup banner
+    const banner = document.createElement('div');
+    banner.style.cssText = `
+      position:fixed;top:0;left:0;right:0;z-index:9999;
+      background:#1a1a1a;border-bottom:2px solid #e50914;
+      padding:12px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    `;
+    banner.innerHTML = `
+      <span style="font-size:1rem;">🔥</span>
+      <span style="font-size:.85rem;color:#fff;font-weight:600;">Firebase not configured yet</span>
+      <span style="font-size:.82rem;color:#888;">
+        To enable real multiplayer: create a free Firebase project at
+        <a href="https://console.firebase.google.com" target="_blank" style="color:#e50914;">console.firebase.google.com</a>
+        → Realtime Database → paste config into watchparty.html
+      </span>
+      <button onclick="this.parentNode.remove()" style="margin-left:auto;background:none;border:none;color:#888;cursor:pointer;font-size:1.1rem;">✕</button>
+    `;
+    document.body.prepend(banner);
+  }
+
+  // ======== SESSION ========
+  const session = JSON.parse(localStorage.getItem('nf_session') || sessionStorage.getItem('nf_session') || 'null');
+  if (!session) { window.location.replace('auth.html'); }
+  const _cu = JSON.parse(localStorage.getItem('nf_users')||'[]').find(u=>u.email===session.email);
+
+  const myColor  = _cu?.avatarColor || '#e50914';
+  const myAvatar = (session.activeProfile || session.name || 'U').charAt(0).toUpperCase();
+  document.getElementById('avatarBtn').textContent  = myAvatar;
+  document.getElementById('avatarBtn').style.background = myColor;
+  document.getElementById('dropdownName').textContent   = session.name;
+
+  // ======== STATE ========
+  let roomCode     = '';
+  let myName       = '';
+  let myMemberId   = '';
+  let currentMovie = { videoId:'', title:'' };
+  let isPlaying    = false;
+  let activeTab    = 'chat';
+  let membersRef, chatRef, syncRef, movieRef;
+  let unsubMembers, unsubChat, unsubSync, unsubMovie;
+
+  // ======== MOVIES ========
+  const MOVIES = [
+    { videoId:'hA6hldpSTF8', title:'Avengers: Endgame',         poster:'https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg' },
+    { videoId:'EXeTwQWrcwY', title:'The Dark Knight',           poster:'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg' },
+    { videoId:'zSWdZVtXT7E', title:'Interstellar',              poster:'https://image.tmdb.org/t/p/w500/rAiYTfKGqDCRIIqo664sY9XZIvQ.jpg' },
+    { videoId:'YoHD9XEInc0', title:'Inception',                 poster:'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg' },
+    { videoId:'JfVOs4VSpmA', title:'Spider-Man: No Way Home',   poster:'https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg' },
+    { videoId:'m8e-FF8MsqU', title:'The Matrix',                poster:'https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg' },
+    { videoId:'zAGVQLHvwOY', title:'Joker',                     poster:'https://upload.wikimedia.org/wikipedia/en/e/e1/Joker_%282019_film%29_poster.jpg' },
+    { videoId:'bLvqoHBptjg', title:'Forrest Gump',              poster:'https://upload.wikimedia.org/wikipedia/en/6/67/Forrest_Gump_poster.jpg' },
+    { videoId:'6hB3S9bIaco', title:'The Shawshank Redemption',  poster:'https://upload.wikimedia.org/wikipedia/en/8/81/ShawshankRedemptionMoviePoster.jpg' },
+    { videoId:'2AUmvWm5ZDQ', title:'John Wick',                 poster:'https://image.tmdb.org/t/p/w500/ziEuG1essDuWuC5lpWUaw1uXY2O.jpg' },
+    { videoId:'hEJnMQG9ev8', title:'Mad Max: Fury Road',        poster:'https://image.tmdb.org/t/p/w500/8tZYtuWezp8JbcsvHYO0O46tFbo.jpg' },
+    { videoId:'qGqiHJTsRkQ', title:'Knives Out',                poster:'https://image.tmdb.org/t/p/w500/pThyQovXQrws2Q07WV2B5K0HBsW.jpg' },
+  ];
+
+  // ======== CREATE ROOM ========
+  document.getElementById('btnCreate').addEventListener('click', async () => {
+    myName = document.getElementById('hostName').value.trim() || session.activeProfile || session.name;
+    const movieVal = document.getElementById('hostMovie').value;
+    if (!myName) { alert('Please enter your name.'); return; }
+
+    roomCode = 'PARTY-' + Math.random().toString(36).substr(2,5).toUpperCase();
+
+    if (movieVal) {
+      const [videoId, title] = movieVal.split('|');
+      currentMovie = { videoId, title };
+    }
+
+    if (FIREBASE_READY) {
+      // Create room in Firebase
+      const roomRef = ref(db, `rooms/${roomCode}`);
+      await set(roomRef, {
+        createdAt:    Date.now(),
+        movie:        currentMovie,
+        playing:      false,
+        host:         myName,
+      });
+      joinFirebaseRoom();
+    } else {
+      enterRoomLocal(true);
+    }
+  });
+
+  // ======== JOIN ROOM ========
+  document.getElementById('btnJoin').addEventListener('click', async () => {
+    myName = document.getElementById('guestName').value.trim() || session.activeProfile || session.name;
+    const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+    if (!myName) { alert('Please enter your name.'); return; }
+    if (!code)   { alert('Please enter a room code.'); return; }
+
+    roomCode = code;
+
+    if (FIREBASE_READY) {
+      // Check room exists
+      const snap = await get(ref(db, `rooms/${roomCode}`));
+      if (!snap.exists()) {
+        alert(`Room "${roomCode}" not found. Check the code and try again.`);
+        return;
+      }
+      const data = snap.val();
+      currentMovie = data.movie || { videoId:'', title:'' };
+      joinFirebaseRoom();
+    } else {
+      enterRoomLocal(false);
+    }
+  });
+
+  // ======== FIREBASE: JOIN & LISTEN ========
+  function joinFirebaseRoom() {
+    membersRef = ref(db, `rooms/${roomCode}/members`);
+    chatRef    = ref(db, `rooms/${roomCode}/chat`);
+    syncRef    = ref(db, `rooms/${roomCode}/sync`);
+    movieRef   = ref(db, `rooms/${roomCode}/movie`);
+
+    // Register myself as a member
+    const meRef = push(membersRef);
+    myMemberId  = meRef.key;
+    set(meRef, { name: myName, color: myColor, joinedAt: Date.now() });
+
+    // Auto-remove me on disconnect
+    onDisconnect(meRef).remove();
+
+    // Show room UI
+    document.getElementById('lobby').style.display = 'none';
+    document.getElementById('partyRoom').classList.add('active');
+    document.getElementById('roomCodeDisplay').textContent = roomCode;
+    buildMoviePicker();
+    if (currentMovie.videoId) loadMovie(currentMovie.videoId, currentMovie.title);
+    addSystemMsg(`You joined room ${roomCode} 🎉`);
+
+    // ---- LISTEN: Members ----
+    unsubMembers = onValue(membersRef, snap => {
+      const data = snap.val() || {};
+      const allMembers = Object.entries(data).map(([id, m]) => ({
+        ...m, id, isMe: id === myMemberId
+      }));
+      document.getElementById('membersRow').innerHTML = allMembers.map(m => `
+        <div class="member-chip">
+          <div class="member-dot" style="background:${m.color||'#22c55e'}"></div>
+          <span style="font-size:.78rem;color:${m.isMe?'#fff':'#ccc'}">${m.name}${m.isMe?' (you)':''}</span>
+        </div>
+      `).join('');
+    });
+
+    // ---- LISTEN: Chat ----
+    let firstLoad = true;
+    unsubChat = onValue(chatRef, snap => {
+      if (firstLoad) { firstLoad = false; return; } // skip initial load
+      const data = snap.val() || {};
+      const msgs = Object.values(data).sort((a,b) => a.ts - b.ts);
+      // Only show the latest new message (avoid re-rendering all)
+      const latest = msgs[msgs.length - 1];
+      if (!latest) return;
+      if (latest.type === 'system') {
+        addSystemMsg(latest.text);
+      } else if (latest.memberId !== myMemberId) {
+        addOtherMsg(latest.name, latest.color, latest.text);
+      }
+    });
+
+    // ---- LISTEN: Movie changes ----
+    unsubMovie = onValue(movieRef, snap => {
+      if (!snap.exists()) return;
+      const m = snap.val();
+      if (m.videoId && m.videoId !== currentMovie.videoId) {
+        currentMovie = m;
+        loadMovie(m.videoId, m.title);
+        addSystemMsg(`Now playing: ${m.title} 🎬`);
+      }
+    });
+
+    // ---- LISTEN: Play/Pause sync ----
+    unsubSync = onValue(syncRef, snap => {
+      if (!snap.exists()) return;
+      const s = snap.val();
+      if (s.by === myMemberId) return; // ignore my own actions
+      isPlaying = s.playing;
+      document.getElementById('btnTogglePlay').textContent = isPlaying ? '⏸ Pause' : '▶ Play';
+      addSystemMsg(`${s.byName} ${isPlaying ? 'pressed ▶ Play' : 'pressed ⏸ Pause'}`);
+    });
+  }
+
+  // ======== FIREBASE: SEND CHAT ========
+  function sendFirebaseChat(text, type = 'chat') {
+    if (!FIREBASE_READY || !chatRef) return;
+    push(chatRef, {
+      text, type,
+      name:     myName,
+      color:    myColor,
+      memberId: myMemberId,
+      ts:       Date.now(),
+    });
+  }
+
+  // ======== CONTROLS (Firebase-synced) ========
+  document.getElementById('btnTogglePlay').addEventListener('click', () => {
+    isPlaying = !isPlaying;
+    document.getElementById('btnTogglePlay').textContent = isPlaying ? '⏸ Pause' : '▶ Play';
+
+    if (FIREBASE_READY && syncRef) {
+      set(syncRef, { playing: isPlaying, by: myMemberId, byName: myName, ts: Date.now() });
+    }
+    addSystemMsg(`You ${isPlaying ? 'pressed ▶ Play' : 'pressed ⏸ Pause'}`);
+  });
+
+  document.getElementById('btnSyncAll').addEventListener('click', () => {
+    addSystemMsg('⟳ Sync signal sent to all members');
+    if (FIREBASE_READY && syncRef) {
+      set(ref(db, `rooms/${roomCode}/syncSignal`), { by: myName, ts: Date.now() });
+    }
+  });
+
+  document.getElementById('btnPickMovie').addEventListener('click', () => {
+    document.getElementById('moviePicker').classList.toggle('open');
+  });
+
+  function buildMoviePicker() {
+    document.getElementById('moviePicker').innerHTML = MOVIES.map(m => `
+      <div class="movie-pick-item" data-videoid="${m.videoId}" data-title="${m.title}">
+        <img src="${m.poster}" alt="${m.title}" onerror="this.style.background='#333'"/>
+        <span>${m.title}</span>
+      </div>
+    `).join('');
+    document.querySelectorAll('.movie-pick-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const newMovie = { videoId: item.dataset.videoid, title: item.dataset.title };
+        loadMovie(newMovie.videoId, newMovie.title);
+        document.getElementById('moviePicker').classList.remove('open');
+        // Sync movie change to all members
+        if (FIREBASE_READY && movieRef) {
+          set(movieRef, newMovie);
+        }
+        addSystemMsg(`You switched to "${newMovie.title}"`);
+        if (FIREBASE_READY) {
+          push(chatRef, { text: `switched to "${newMovie.title}" 🎬`, type:'system', name: myName, color: myColor, memberId: myMemberId, ts: Date.now() });
+        }
+      });
+    });
+  }
+
+  // ======== LOCAL FALLBACK (no Firebase) ========
+  function enterRoomLocal(isHost) {
+    document.getElementById('lobby').style.display = 'none';
+    document.getElementById('partyRoom').classList.add('active');
+    document.getElementById('roomCodeDisplay').textContent = roomCode;
+    buildMoviePicker();
+    if (currentMovie.videoId) loadMovie(currentMovie.videoId, currentMovie.title);
+
+    // Show only yourself as member
+    document.getElementById('membersRow').innerHTML = `
+      <div class="member-chip">
+        <div class="member-dot" style="background:${myColor}"></div>
+        <span style="font-size:.78rem;color:#fff;">${myName} (you)</span>
+      </div>
+    `;
+    addSystemMsg(`Room ${roomCode} ${isHost ? 'created' : 'joined'} 🎉`);
+    addSystemMsg('⚠️ Configure Firebase to invite real friends.');
+    if (currentMovie.title) setTimeout(() => addSystemMsg(`Now playing: ${currentMovie.title}`), 800);
+  }
+
+  // ======== LOAD MOVIE ========
+  function loadMovie(videoId, title) {
+    currentMovie = { videoId, title };
+    document.getElementById('playerPlaceholder').style.display = 'none';
+    const iframe = document.getElementById('playerIframe');
+    iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1`;
+    iframe.style.display = 'block';
+    document.getElementById('nowPlayingBadge').textContent = '🎬 ' + title;
+    isPlaying = false;
+    document.getElementById('btnTogglePlay').textContent = '▶ Play';
+  }
+
+  // ======== COPY ROOM CODE ========
+  document.getElementById('copyRoomBtn').addEventListener('click', () => {
+    const link = `${location.origin}${location.pathname}?join=${roomCode}`;
+    navigator.clipboard.writeText(link).then(() => {
+      document.getElementById('copyRoomBtn').textContent = '✓';
+      setTimeout(() => { document.getElementById('copyRoomBtn').textContent = '📋'; }, 2000);
+    });
+  });
+
+  // ======== LEAVE ========
+  document.getElementById('btnLeave').addEventListener('click', async () => {
+    // Remove my member entry from Firebase
+    if (FIREBASE_READY && myMemberId) {
+      await remove(ref(db, `rooms/${roomCode}/members/${myMemberId}`));
+    }
+    // Unsubscribe listeners
+    [unsubMembers, unsubChat, unsubSync, unsubMovie].forEach(u => u && u());
+
+    document.getElementById('playerIframe').src = '';
+    document.getElementById('partyRoom').classList.remove('active');
+    document.getElementById('lobby').style.display = 'grid';
+    document.getElementById('chatMessages').innerHTML = '';
+    roomCode = ''; currentMovie = { videoId:'', title:'' }; myMemberId = '';
+  });
+
+  // ======== CHAT TABS ========
+  document.querySelectorAll('.chat-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.chat-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeTab = tab.dataset.tab;
+      const isAI = activeTab === 'ai';
+      document.getElementById('aiPrompts').classList.toggle('hidden', !isAI);
+      document.getElementById('aiAskBtn').classList.toggle('hidden', !isAI);
+      document.getElementById('chatInput').placeholder = isAI ? 'Ask AI about this movie…' : 'Message your party…';
+    });
+  });
+
+  document.querySelectorAll('.ai-prompt-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.getElementById('chatInput').value = chip.dataset.q;
+      sendMessage();
+    });
+  });
+
+  // ======== SEND MESSAGE ========
+  document.getElementById('sendBtn').addEventListener('click', sendMessage);
+  document.getElementById('aiAskBtn').addEventListener('click', sendMessage);
+  document.getElementById('chatInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text  = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    if (activeTab === 'ai') {
+      addMyMsg('You', text);
+      askAI(text);
+    } else {
+      addMyMsg(myName, text);
+      // Broadcast to Firebase
+      if (FIREBASE_READY && chatRef) {
+        push(chatRef, { text, type:'chat', name: myName, color: myColor, memberId: myMemberId, ts: Date.now() });
+      }
+    }
+  }
+
+  // ======== AI CHAT (local — no API needed) ========
+  const AI_KNOWLEDGE = {
+    'Avengers: Endgame':       { facts:['It grossed over $2.7 billion worldwide.','The runtime is 3h 1m — the longest MCU film.','The "I am Iron Man" line was improvised.'], chars:'Tony Stark, Steve Rogers, Thor, Hulk, Natasha, Hawkeye', quotes:'"I am Iron Man." — Tony Stark', recs:['Inception','The Matrix','Interstellar'] },
+    'The Dark Knight':         { facts:['Heath Ledger won a posthumous Oscar for his Joker.','The Joker intentionally has no backstory.','Shot with real IMAX cameras.'], chars:'Batman, The Joker, Harvey Dent, Alfred, Commissioner Gordon', quotes:'"Why so serious?" — The Joker', recs:['Joker','Inception','John Wick'] },
+    'Interstellar':            { facts:['Scientists used it to publish a real paper on black holes.','The corn fields were real and later sold.','Hans Zimmer recorded the score on a church organ.'], chars:'Cooper, Brand, Murphy, Dr. Mann, TARS', quotes:'"Do not go gentle into that good night."', recs:['The Matrix','Inception','Avengers: Endgame'] },
+    'Inception':               { facts:['The spinning top at the end was never shown to stop or keep going.','Christopher Nolan wrote the script over 10 years.','The hallway fight took 3 weeks to film.'], chars:'Dom Cobb, Arthur, Ariadne, Eames, Saito', quotes:'"You must not be afraid to dream a little bigger, darling."', recs:['The Matrix','Interstellar','The Prestige'] },
+    'Joker':                   { facts:['Joaquin Phoenix lost 52 lbs for the role.','The staircase dance was fully improvised.','First comic book film to win the Venice Golden Lion.'], chars:'Arthur Fleck, Murray Franklin, Sophie, Thomas Wayne', quotes:'"Is it just me, or is it getting crazier out there?"', recs:['The Dark Knight','Knives Out','Get Out'] },
+    'The Matrix':              { facts:['The bullet-time effect took months to prepare.','Keanu Reeves trained for 4 months straight.','Directors originally wanted to film in Tokyo.'], chars:'Neo, Morpheus, Trinity, Agent Smith, The Oracle', quotes:'"There is no spoon."', recs:['Inception','Interstellar','John Wick'] },
+    'Forrest Gump':            { facts:['Tom Hanks was paid $60M for the film.','The running sequence covered 3 years of filming locations.','A real shrimp boat company was used.'], chars:'Forrest Gump, Jenny, Lt. Dan, Bubba, Mrs. Gump', quotes:'"Life is like a box of chocolates."', recs:['The Shawshank Redemption','La La Land','Interstellar'] },
+    'The Shawshank Redemption':{ facts:['It flopped at the box office but became #1 on IMDb.','The maggot given to the crow was chocolate.','Morgan Freeman auditioned 3 times for Red.'], chars:'Andy Dufresne, Red, Warden Norton, Brooks, Captain Hadley', quotes:'"Get busy living, or get busy dying."', recs:['Forrest Gump','Interstellar','Joker'] },
+    'John Wick':               { facts:['Keanu Reeves did 95% of his own stunts.','The filmmakers invented a fighting style called "gun fu".','The original title was "Scorn".'], chars:'John Wick, Viggo Tarasov, Iosef, Marcus, Charon', quotes:'"People keep asking if I am back."', recs:['Mad Max: Fury Road','The Dark Knight','The Matrix'] },
+    'Mad Max: Fury Road':      { facts:['Tom Hardy and Charlize Theron barely spoke during filming.','120 cars were built; 88 were destroyed.','George Miller filmed 480 hours of footage.'], chars:'Max, Imperator Furiosa, Nux, Immortan Joe', quotes:'"What a lovely day!"', recs:['John Wick','Avengers: Endgame','Inception'] },
+    'Knives Out':              { facts:['Inspired by Agatha Christie novels.','Daniel Craig studied Southern US accents on YouTube.','Shot in just 40 days.'], chars:'Benoit Blanc, Marta Cabrera, Harlan Thrombey, Ransom', quotes:'"I eliminated the impossible. Whatever remains must be the truth."', recs:['The Dark Knight','Joker','Interstellar'] },
+  };
+
+  function askAI(question) {
+    document.getElementById('aiTyping').classList.add('show');
+    scrollChat();
+    setTimeout(() => {
+      document.getElementById('aiTyping').classList.remove('show');
+      addAIMsg(generateAIAnswer(question));
+    }, 700 + Math.random() * 500);
+  }
+
+  function generateAIAnswer(q) {
+    const title = currentMovie.title;
+    const info  = AI_KNOWLEDGE[title];
+    const ql    = q.toLowerCase();
+    if (!title) return 'Pick a movie first and I will tell you everything about it! 🎬';
+    if (!info)  return `Watching "${title}" with you! Ask about cast, plot, quotes, or what to watch next. 🍿`;
+    if (ql.match(/fact|trivia|fun/))           return `🎬 Fun fact: ${info.facts[Math.floor(Math.random()*info.facts.length)]}`;
+    if (ql.match(/cast|character|actor|who/))  return `👥 Main cast: ${info.chars}`;
+    if (ql.match(/quote|line|dialogue/))       return `💬 "${info.quotes}"`;
+    if (ql.match(/next|recommend|after|watch/)) return `🍿 After this, watch: ${info.recs.join(', ')}`;
+    if (ql.match(/plot|about|happening|story/)) return `📖 "${title}" — ${info.facts[0]}`;
+    return `About "${title}": ${info.facts[Math.floor(Math.random()*info.facts.length)]} 🎬`;
+  }
+
+  // ======== CHAT HELPERS ========
+  function addMsg(type, name, color, text) {
+    const el = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = `msg ${type}`;
+    div.innerHTML = type !== 'system'
+      ? `<div class="msg-name" style="color:${color||'#888'}">${name}</div><div class="msg-bubble">${text}</div>`
+      : `<div class="msg-bubble">${text}</div>`;
+    el.appendChild(div);
+    scrollChat();
+  }
+  function addMyMsg(name, text)           { addMsg('mine',  name, myColor, text); }
+  function addOtherMsg(name, color, text) { addMsg('other', name, color,   text); }
+  function addAIMsg(text)                 { addMsg('ai',    '🤖 AI', '#e50914', text); }
+  function addSystemMsg(text)             { addMsg('system','','', text); }
+  function scrollChat() {
+    const el = document.getElementById('chatMessages');
+    setTimeout(() => { el.scrollTop = el.scrollHeight; }, 50);
+  }
+
+  // ======== DROPDOWN / LOGOUT ========
+  const avatarBtn = document.getElementById('avatarBtn');
+  const dropdown  = document.getElementById('userDropdown');
+  avatarBtn.addEventListener('click', e => { e.stopPropagation(); dropdown.classList.toggle('open'); });
+  document.addEventListener('click', () => dropdown.classList.remove('open'));
+  dropdown.addEventListener('click', e => e.stopPropagation());
+  document.getElementById('logoutBtn').addEventListener('click', e => {
+    e.preventDefault();
+    localStorage.removeItem('nf_session'); sessionStorage.removeItem('nf_session');
+    window.location.href = 'auth.html';
+  });
+
+  // Pre-fill name from session
+  document.getElementById('hostName').value  = session.activeProfile || session.name || '';
+  document.getElementById('guestName').value = session.activeProfile || session.name || '';
+
+  // Auto-join from URL ?join=PARTY-XXXXX
+  const urlP = new URLSearchParams(window.location.search);
+  if (urlP.get('join')) {
+    document.getElementById('roomCodeInput').value = urlP.get('join');
+  }
+  if (urlP.get('movie')) {
+    const m = MOVIES.find(x => x.title === decodeURIComponent(urlP.get('movie')));
+    if (m) document.getElementById('hostMovie').value = `${m.videoId}|${m.title}`;
+  }
+  </script>
+</body>
+</html>

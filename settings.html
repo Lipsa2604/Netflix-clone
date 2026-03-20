@@ -67,6 +67,7 @@
           <div class="dropdown-name"><span data-i18n="nav_signin">Signed in as</span><strong id="dropdownName">User</strong></div>
           <a href="profile.html"  class="dropdown-item" data-i18n="nav_my_profile">My Profile</a>
           <a href="settings.html" class="dropdown-item" data-i18n="nav_account">Account Settings</a>
+          <a href="billing.html"  class="dropdown-item">Billing</a>
           <a href="mylist.html"   class="dropdown-item" data-i18n="nav_mylist">My List</a>
           <a href="#" class="dropdown-item logout" id="logoutBtn" data-i18n="nav_signout">Sign Out</a>
         </div>
@@ -85,14 +86,14 @@
           <h4 data-i18n="label_current_plan">Current Plan</h4>
           <p data-i18n="desc_current_plan">Unlimited movies, TV shows and more.</p>
         </div>
-        <div class="plan-badge" data-i18n="plan_badge">★ Premium</div>
+        <div class="plan-badge" id="settingsPlanBadge">★ Standard</div>
       </div>
       <div class="setting-row">
         <div class="setting-label">
           <h4 data-i18n="label_billing">Billing Cycle</h4>
-          <p data-i18n="desc_billing">Next billing date: April 20, 2026</p>
+          <p id="settingsBillingDate">Next billing date: April 20, 2026</p>
         </div>
-        <button class="btn-danger" data-i18n="btn_manage_plan">Manage Plan</button>
+        <a href="billing.html" class="btn-danger" style="text-decoration:none;padding:9px 20px;" data-i18n="btn_manage_plan">Manage Plan</a>
       </div>
     </div>
 
@@ -204,6 +205,51 @@
       </div>
     </div>
 
+    <!-- PARENTAL CONTROLS -->
+    <div class="card">
+      <div class="card-title">Parental Controls</div>
+      <div class="setting-row">
+        <div class="setting-label">
+          <h4>Kids Profile PIN</h4>
+          <p id="pinStatusText">Protect Kids profiles with a 4-digit PIN.</p>
+        </div>
+        <button class="btn-danger" id="btnManagePin" style="color:#ccc;border-color:rgba(255,255,255,.2);">Set PIN</button>
+      </div>
+      <div class="setting-row hidden" id="changePinRow">
+        <div class="setting-label">
+          <h4>Change PIN</h4>
+          <p>Enter your current PIN then choose a new one.</p>
+        </div>
+        <button class="btn-danger" id="btnChangePin" style="color:#ccc;border-color:rgba(255,255,255,.2);">Change</button>
+      </div>
+      <div class="setting-row hidden" id="removePinRow">
+        <div class="setting-label">
+          <h4>Remove PIN</h4>
+          <p>Kids profiles will be accessible without a PIN.</p>
+        </div>
+        <button class="btn-danger" id="btnRemovePin">Remove PIN</button>
+      </div>
+    </div>
+
+    <!-- PIN CHANGE MODAL -->
+    <div class="confirm-modal hidden" id="pinModal">
+      <div class="confirm-panel" style="max-width:380px;">
+        <h3 id="pinModalTitle">Set Parental PIN</h3>
+        <p id="pinModalDesc" style="color:#888;font-size:.88rem;line-height:1.5;margin:0 0 20px;">Enter a 4-digit PIN to protect Kids profiles.</p>
+        <div style="display:flex;gap:10px;justify-content:center;margin-bottom:16px;" id="pinModalDigits">
+          <input class="pin-digit-s" type="password" maxlength="1" inputmode="numeric" style="width:52px;height:62px;text-align:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:1.6rem;font-weight:700;outline:none;"/>
+          <input class="pin-digit-s" type="password" maxlength="1" inputmode="numeric" style="width:52px;height:62px;text-align:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:1.6rem;font-weight:700;outline:none;"/>
+          <input class="pin-digit-s" type="password" maxlength="1" inputmode="numeric" style="width:52px;height:62px;text-align:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:1.6rem;font-weight:700;outline:none;"/>
+          <input class="pin-digit-s" type="password" maxlength="1" inputmode="numeric" style="width:52px;height:62px;text-align:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:1.6rem;font-weight:700;outline:none;"/>
+        </div>
+        <div style="font-size:.75rem;color:#f87171;min-height:18px;text-align:center;margin-bottom:12px;" id="pinModalErr"></div>
+        <div class="confirm-btns">
+          <button class="btn-cancel" id="btnCancelPin">Cancel</button>
+          <button class="btn-primary" id="btnSavePin" disabled style="padding:10px 24px;background:#e50914;color:#fff;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer;">Save PIN</button>
+        </div>
+      </div>
+    </div>
+
     <!-- DANGER -->
     <div class="card">
       <div class="card-title" data-i18n="section_danger">Danger Zone</div>
@@ -241,6 +287,7 @@
     </div>
   </div>
 
+  <script src="profile-key.js"></script>
   <script src="i18n.js"></script>
   <script>
   const session = JSON.parse(localStorage.getItem('nf_session') || sessionStorage.getItem('nf_session') || 'null');
@@ -254,7 +301,16 @@
   document.getElementById('avatarBtn').style.background = aColor;
   document.getElementById('dropdownName').textContent = session.name;
 
-  const SETTINGS_KEY = 'nf_settings_' + session.email;
+  // ======== SYNC PLAN FROM BILLING DATA ========
+  const BILLING_KEY = 'nf_billing_' + session.email;
+  const billingData = JSON.parse(localStorage.getItem(BILLING_KEY) || '{}');
+  const _planNames  = { mobile:'Mobile', standard:'Standard', premium:'Premium' };
+  const _planName   = _planNames[billingData.plan] || 'Standard';
+  const _nextDate   = billingData.nextDate || 'April 20, 2026';
+  document.getElementById('settingsPlanBadge').textContent   = '★ ' + _planName;
+  document.getElementById('settingsBillingDate').textContent = 'Next billing date: ' + _nextDate;
+
+  const SETTINGS_KEY = profileKey('nf_settings');
   function getSettings() { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); }
   function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
 
@@ -320,10 +376,91 @@
   document.getElementById('btn-confirmDelete').addEventListener('click', () => {
     const users = JSON.parse(localStorage.getItem('nf_users') || '[]');
     localStorage.setItem('nf_users', JSON.stringify(users.filter(u => u.email !== session.email)));
-    [SETTINGS_KEY, 'nf_session', 'nf_lang', 'nf_history_'+session.email, 'nf_mylist_'+session.email]
+    [SETTINGS_KEY, 'nf_session', 'nf_lang',
+     profileKey('nf_history'), profileKey('nf_mylist'), profileKey('nf_downloads')]
       .forEach(k => localStorage.removeItem(k));
     sessionStorage.removeItem('nf_session');
     window.location.href = 'auth.html';
+  });
+
+  // ======== PARENTAL CONTROLS PIN ========
+  const PIN_KEY = 'nf_parental_pin_' + session.email;
+  function getPin()    { return localStorage.getItem(PIN_KEY); }
+  function savePin(p)  { localStorage.setItem(PIN_KEY, p); }
+  function removePin() { localStorage.removeItem(PIN_KEY); }
+
+  function refreshPinUI() {
+    const hasPin = !!getPin();
+    document.getElementById('pinStatusText').textContent = hasPin
+      ? '✓ PIN is set — Kids profiles are protected.'
+      : 'Protect Kids profiles with a 4-digit PIN.';
+    document.getElementById('btnManagePin').textContent  = hasPin ? 'Update PIN' : 'Set PIN';
+    document.getElementById('changePinRow').classList.toggle('hidden', !hasPin);
+    document.getElementById('removePinRow').classList.toggle('hidden', !hasPin);
+  }
+  refreshPinUI();
+
+  // Pin digit inputs in modal
+  const pinDigs = Array.from(document.querySelectorAll('.pin-digit-s'));
+  pinDigs.forEach((inp, i) => {
+    inp.addEventListener('input', () => {
+      inp.value = inp.value.replace(/\D/g,'').slice(-1);
+      if (inp.value && i < 3) pinDigs[i+1].focus();
+      document.getElementById('btnSavePin').disabled = !pinDigs.every(d => d.value.length === 1);
+      document.getElementById('pinModalErr').textContent = '';
+    });
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !inp.value && i > 0) pinDigs[i-1].focus();
+    });
+  });
+
+  function openPinModal(title, desc) {
+    document.getElementById('pinModalTitle').textContent = title;
+    document.getElementById('pinModalDesc').textContent  = desc;
+    pinDigs.forEach(d => { d.value = ''; });
+    document.getElementById('btnSavePin').disabled = true;
+    document.getElementById('pinModalErr').textContent = '';
+    document.getElementById('pinModal').classList.remove('hidden');
+    setTimeout(() => pinDigs[0].focus(), 80);
+  }
+
+  document.getElementById('btnManagePin').addEventListener('click', () => {
+    openPinModal('Set Parental PIN', 'Enter a 4-digit PIN to protect Kids profiles.');
+  });
+  document.getElementById('btnChangePin').addEventListener('click', () => {
+    openPinModal('Change Parental PIN', 'Enter your new 4-digit PIN.');
+  });
+  document.getElementById('btnCancelPin').addEventListener('click', () => {
+    document.getElementById('pinModal').classList.add('hidden');
+  });
+  document.getElementById('pinModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('pinModal')) document.getElementById('pinModal').classList.add('hidden');
+  });
+
+  document.getElementById('btnSavePin').addEventListener('click', () => {
+    const pin = pinDigs.map(d => d.value).join('');
+    if (/^(\d)\1{3}$/.test(pin)) {
+      document.getElementById('pinModalErr').textContent = 'PIN cannot be 4 identical digits.';
+      return;
+    }
+    savePin(pin);
+    document.getElementById('pinModal').classList.add('hidden');
+    refreshPinUI();
+    const toast = document.getElementById('toast-settings');
+    toast.textContent = '✓ Parental PIN saved';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+  });
+
+  document.getElementById('btnRemovePin').addEventListener('click', () => {
+    if (confirm('Remove the parental PIN? Kids profiles will no longer require a PIN.')) {
+      removePin();
+      refreshPinUI();
+      const toast = document.getElementById('toast-settings');
+      toast.textContent = '✓ PIN removed';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
   });
 
   // ======== DROPDOWN / LOGOUT ========
